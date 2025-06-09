@@ -1,0 +1,45 @@
+#include "SsmsThreadLoopReadWriteTest.h"
+#include "Network/SsmsEventLoop.h"
+#include "Network/SsmsAcceptor.h"
+#include "Network/SsmsEventLoopThread.h"
+#include "Network/SsmsTcpConnection.h"
+#include "Base/SsmsLogStream.h"
+#include "Network/SsmsNetAddress.h"
+
+using namespace ssms::nw;
+
+HttpContextTest::HttpContextTest(const TcpConnectionPtr &conn)
+: conn_(conn)
+{
+
+}
+
+int HttpContextTest::Parse(const SsmsBufferPtr &data)
+{
+    char ret[] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 12\r\n\r\nHello World!\r\n";
+    conn_.lock()->SendPktInLoop(ret, strlen(ret));
+    return 0;
+}
+
+void TestRead()
+{
+    SsmsEventLoopThread loop;
+    loop.Run();
+    SsmsNetAddressPtr addr = std::make_shared<SsmsNetAddress>("0.0.0.0", 1935, true);
+    SsmsAcceptorPtr acceptor = std::make_shared<SsmsAcceptor>(loop.Loop(), addr, SsmsServerProtocolRTMP);
+    acceptor->SetAcceptCallback([] (SsmsEventLoop *loop, int fd, const SsmsNetAddressPtr &local, const SsmsNetAddressPtr &remote, SsmsServerProtocol protocol) {
+        TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop, local, remote, fd);
+        SsmsContextPtr context = std::make_shared<HttpContextTest>(conn);
+        conn->SetContext(context);
+        loop->AddTask([loop, conn] () {
+            loop->AddEvent(conn);
+        });
+        LOG_TRACE << "do callback";
+    });
+
+    loop.Loop()->AddTask([&acceptor] () {
+        acceptor->StartListen();
+    });    
+
+    while (true);
+}
