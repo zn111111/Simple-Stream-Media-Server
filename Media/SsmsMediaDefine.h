@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <stdint.h>
 
 namespace ssms
 {
@@ -32,6 +33,27 @@ namespace ssms
 
         class SsmsPlayClient;
         using SsmsPlayClientPtr = std::shared_ptr<SsmsPlayClient>;
+
+        class SsmsStream;
+        using SsmsStreamPtr = std::shared_ptr<SsmsStream>;
+
+        class SsmsCodecHeader;
+        using SsmsCodecHeaderPtr = std::shared_ptr<SsmsCodecHeader>;
+
+        class SsmsGopManagment;
+        using SsmsGopManagmentPtr = std::shared_ptr<SsmsGopManagment>;
+
+        class SsmsTimestampCorrector;
+        using SsmsTimestampCorrectorPtr = std::shared_ptr<SsmsTimestampCorrector>;
+
+        //音频最大间隔, 单位毫秒, 超过此值需要纠正时间戳
+        const int AUDIO_MAX_DELTA = 67;
+        //视频最大间隔, 单位毫秒, 超过此值需要纠正时间戳
+        const int VIDEO_MAX_DELTA = 87;
+        //音频默认间隔
+        const int AUDIO_DEFAULT_DELTA = 23;
+        //视频默认间隔
+        const int VIDEO_DEFAULT_DELTA = 40;
 
         enum RtmpHandshakeState
         {
@@ -110,6 +132,19 @@ namespace ssms
             uint8_t message_type_id{0};
             uint32_t stream_id{0};
             uint32_t timestamp_delta{0};
+        };
+
+        struct GopItemInfo
+        {
+            GopItemInfo(uint64_t index, uint32_t timestamp)
+            : key_frame_index(index)
+            , key_frame_timestamp(timestamp)
+            {
+
+            }
+
+            uint64_t key_frame_index;
+            uint32_t key_frame_timestamp;
         };
     }
 }

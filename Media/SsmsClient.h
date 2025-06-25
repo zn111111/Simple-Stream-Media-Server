@@ -26,8 +26,8 @@ namespace ssms
             
             virtual int Process(const SsmsPacketPtr &data, const std::string &command, double trans_id = 999999.999999) = 0;
         protected:
-            std::string app_;
-            std::string stream_;
+            std::string app_name_;
+            std::string stream_name_;
             SsmsSessionPtr sess_;
             SsmsLiveManagmentPtr live_manage_;
             TcpConnectionPtr conn_;

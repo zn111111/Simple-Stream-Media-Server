@@ -62,7 +62,7 @@ void SsmsTcpServer::Start()
         rtmp_acceptor_->StartListen();
     });
 }
-#include <iostream>
+
 void SsmsTcpServer::AfterAccept(SsmsEventLoop *loop, int fd, const SsmsNetAddressPtr &local, const SsmsNetAddressPtr &remote, SsmsServerProtocol protocol)
 {
     TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop, local, remote, fd);

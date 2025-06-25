@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <stdint.h>
 #include "NonCopyable.h"
 
@@ -19,6 +20,8 @@ namespace ssms
             static void Write4BytesLe(char *data, uint32_t src);
             static void Write4BytesBe(char *data, uint32_t src);
             static bool Compare(double d1, double d2, double eps = 1e-9);
+            //返回filepath的上级目录加上当前文件, dir/file
+            static std::string GetParentDirWithFilename(const std::string &filepath);
         };
     }
 }

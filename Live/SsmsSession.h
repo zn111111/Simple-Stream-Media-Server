@@ -15,17 +15,20 @@ namespace ssms
         class SsmsSession : public NonCopyable
         {
         public:
-            SsmsSession() = default;
+            SsmsSession();
             ~SsmsSession() = default;
 
             void AddConsumer(const SsmsPlayClientPtr &consumer);
             void DeleteConsumer(const SsmsPlayClientPtr &consumer);
-            void SendDataToConsumers(const SsmsPacketPtr &data);
             void SetProducer(const SsmsPublishClientPtr &producer);
+            SsmsStreamPtr Stream() const;
+            void ActiveAll();
+            void DeActive(const SsmsPlayClientPtr &consumer);
         private:
             std::mutex lock_;
             std::unordered_set<SsmsPlayClientPtr> consumers_;
             SsmsPublishClientPtr producer_;
+            SsmsStreamPtr stream_;
         };
     }
 }

@@ -3,8 +3,15 @@
 #include "Media/SsmsRtmpMessageContext.h"
 #include "Media/SsmsPlayClient.h"
 #include "Media/SsmsPublishClient.h"
+#include "Media/SsmsStream.h"
 
 using namespace ssms::live;
+
+SsmsSession::SsmsSession()
+: stream_(std::make_shared<SsmsStream>())
+{
+
+}
 
 void SsmsSession::AddConsumer(const SsmsPlayClientPtr &consumer)
 {
@@ -28,32 +35,26 @@ void SsmsSession::DeleteConsumer(const SsmsPlayClientPtr &consumer)
     consumers_.erase(consumer);
 }
 
-void SsmsSession::SendDataToConsumers(const SsmsPacketPtr &data)
+void SsmsSession::SetProducer(const SsmsPublishClientPtr &producer)
+{
+    producer_ = producer;
+}
+
+SsmsStreamPtr SsmsSession::Stream() const
+{
+    return stream_;
+}
+
+void SsmsSession::ActiveAll()
 {
     std::lock_guard<std::mutex> lk(lock_);
     for (auto it = consumers_.begin(); it != consumers_.end(); ++it)
     {
-        if ((*it)->NewComming())
-        {
-            if (producer_->Meta())
-            {
-                (*it)->Play(producer_->Meta(), true);
-            }
-            if (producer_->AudioSequenceHeader())
-            {
-                (*it)->Play(producer_->AudioSequenceHeader(), true);
-            }
-            if (producer_->VideoSequenceHeader())
-            {
-                (*it)->Play(producer_->VideoSequenceHeader(), true);
-            }
-            (*it)->SetToOld();
-        }
-        (*it)->Play(data, true);
+        (*it)->Active();
     }
 }
 
-void SsmsSession::SetProducer(const SsmsPublishClientPtr &producer)
+void SsmsSession::DeActive(const SsmsPlayClientPtr &consumer)
 {
-    producer_ = producer;
+    consumer->DeActive();
 }

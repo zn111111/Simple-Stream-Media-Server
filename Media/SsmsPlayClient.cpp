@@ -8,19 +8,24 @@
 #include "Live/SsmsSession.h"
 #include "Network/SsmsTcpConnection.h"
 #include "Network/SsmsEventLoop.h"
+#include "SsmsStream.h"
+#include "SsmsGopManagment.h"
+#include "SsmsINIReader.h"
+#include "SsmsTimestampCorrector.h"
 
 using namespace ssms::media;
 using namespace ssms::base;
 
 SsmsPlayClient::SsmsPlayClient(const std::string &app,
-                const std::string &stream,
+                const std::string &stream_name,
                 const SsmsLiveManagmentPtr &live_manage,
                 const TcpConnectionPtr &conn,
                 SsmsRtmpMessageContextPtr context,
                 SsmsEventLoop *loop)
-: SsmsClient(app, stream, live_manage, conn, context, loop)
+: SsmsClient(app, stream_name, live_manage, conn, context, loop)
 {
-
+    active_.store(false);
+    corrector_ = std::make_shared<SsmsTimestampCorrector>();
 }
 
 int SsmsPlayClient::Process(const SsmsPacketPtr &data, const std::string &command, double trans_id)
@@ -78,9 +83,56 @@ void SsmsPlayClient::SetToOld()
     conn_->SetToOldConnection();
 }
 
-void SsmsPlayClient::Play(const SsmsPacketPtr &pkt, bool fmt0)
+void SsmsPlayClient::Play()
 {
-    Addtask(pkt, fmt0);
+    SsmsStreamPtr stream = sess_->Stream();
+
+    stream->Pop(std::dynamic_pointer_cast<SsmsPlayClient>(shared_from_this()));
+    if (meta_)
+    {
+        context_->BuildChunk(meta_, true);
+        meta_.reset();
+    }
+    if (aac_sequence_header_)
+    {
+        context_->BuildChunk(aac_sequence_header_, true);
+        aac_sequence_header_.reset();
+    }
+    if (avc_sequence_header_)
+    {
+        context_->BuildChunk(avc_sequence_header_, true);
+        avc_sequence_header_.reset();
+    }
+
+    for (int i = 0; i < out_packet_.size(); i++)
+    {
+        uint32_t corrected_timestamp = corrector_->CorrectTimestamp(out_packet_[i]);
+        out_packet_[i]->SetTimestamp(corrected_timestamp);
+        context_->BuildChunk(out_packet_[i], true);
+        //out_packet_里不会有头部, 这里就不加头部的判断了
+        if (out_packet_[i]->IsVideo())
+        {
+            out_video_timestamp_ = corrected_timestamp;
+        }
+    }
+    out_packet_.clear();
+    context_->SendNodes();
+}
+
+void SsmsPlayClient::Active()
+{
+    if (!active_.load())
+    {
+        loop_->AddTask([this] () {
+            Play();
+        });
+        active_.store(true);
+    }
+}
+
+void SsmsPlayClient::DeActive()
+{
+    active_.store(false);
 }
 
 int SsmsPlayClient::GetStreamLengthResponse()
@@ -96,21 +148,20 @@ int SsmsPlayClient::GetStreamLengthResponse()
     SsmsUtils::Write4BytesBe(pkt->data + 2, 1);
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
     SsmsUtils::Write4BytesBe(pkt->data, 128);
-    Play(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp StreamBegin";
     return 0;
 }
 
 int SsmsPlayClient::PlayResponse(double trans_id)
 {
-    if (!live_manage_->Exist(app_ + "/" + stream_))
+    if (!live_manage_->Exist(app_name_ + "/" + stream_name_))
     {
-        LOG_DEBUG << "stream name " << app_ << "/" << stream_ << " is not exist";
+        LOG_DEBUG << "stream name " << app_name_ << "/" << stream_name_ << " is not exist";
         return -1;
     }
 
-    sess_ = live_manage_->CreateSession(app_ + "/" + stream_);
-    sess_ = live_manage_->GetSession(app_ + "/" + stream_);
+    sess_ = live_manage_->GetSession(app_name_ + "/" + stream_name_);
     sess_->AddConsumer(std::dynamic_pointer_cast<SsmsPlayClient>(shared_from_this()));
 
     std::shared_ptr<SsmsAmf0String> command = std::make_shared<SsmsAmf0String>();
@@ -154,7 +205,7 @@ int SsmsPlayClient::PlayResponse(double trans_id)
     header->message_type_id = 20;
     header->stream_id = 1;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
-    Play(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp onStatus";
 
     command = std::make_shared<SsmsAmf0String>();
@@ -198,7 +249,7 @@ int SsmsPlayClient::PlayResponse(double trans_id)
     header->message_type_id = 20;
     header->stream_id = 1;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
-    Play(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp onStatus";
 
     command = std::make_shared<SsmsAmf0String>();
@@ -221,7 +272,7 @@ int SsmsPlayClient::PlayResponse(double trans_id)
     header->message_type_id = 18;
     header->stream_id = 1;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
-    Play(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp |RtmpSampleAccess";
 
     command = std::make_shared<SsmsAmf0String>();
@@ -244,15 +295,16 @@ int SsmsPlayClient::PlayResponse(double trans_id)
     header->message_type_id = 20;
     header->stream_id = 1;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
-    Play(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp onStatus";
 
     return 0;
 }
 
-void SsmsPlayClient::Addtask(const SsmsPacketPtr &pkt, bool fmt0)
+void SsmsPlayClient::PostMessage(const SsmsPacketPtr &pkt, bool fmt0)
 {
-    loop_->AddTask([this, pkt, fmt0] {
-        context_->BuildChunk(std::move(pkt), fmt0);
+    loop_->AddTask([this, pkt] () {
+        context_->BuildChunk(pkt, true);
+        context_->SendNodes();
     });
 }

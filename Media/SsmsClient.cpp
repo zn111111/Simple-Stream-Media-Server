@@ -8,8 +8,8 @@ SsmsClient::SsmsClient(const std::string &app,
                 const TcpConnectionPtr &conn,
                 SsmsRtmpMessageContextPtr context,
                 SsmsEventLoop *loop)
-: app_(app)
-, stream_(stream)
+: app_name_(app)
+, stream_name_(stream)
 , live_manage_(live_manage)
 , conn_(conn)
 , context_(context)

@@ -59,7 +59,6 @@ namespace ssms
             void SendPktInLoop(char *data, uint32_t len);
             bool NewConnection() const;
             void SetToOldConnection();
-            //发送多个数据包, 可能会被其他线程调用, 直接入队
             void SendNodes(const std::list<BufferNodePtr> &iovecs);
         private:
             //发送单个数据包, 可能会被其他线程调用, 不监听，先尝试发送, 发送失败或没发完就入队

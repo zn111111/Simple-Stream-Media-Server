@@ -28,6 +28,7 @@ namespace ssms
             //将pkt拆分成一个个chunk, 存在sending_nodes_中
             //控制消息第一个chunk必须是fmt0, 但是音视频消息可以根据实际情况选择是否使用fmt0
             void BuildChunk(const SsmsPacketPtr &pkt, bool fmt0);
+            void SendNodes();
         private:
             int ParseMessage(const SsmsBufferPtr &data);
             int ParseAssembledMessage(const SsmsPacketPtr &data);
@@ -42,7 +43,7 @@ namespace ssms
             void ClearSendCompleteData() override;
             //解析Amf编码的数据, 如果有匹配的command, 默认会解析流名称, 否则out_data是SsmsAmf0Object或者SsmsAmf0EcmaArray
             int ParseAmfData(const SsmsPacketPtr &data, uint32_t offset, const std::string &command, SsmsAmf0TypePtr &out_data);
-            void Addtask(const SsmsPacketPtr &pkt, bool fmt0);
+            void PostMessage(const SsmsPacketPtr &pkt, bool fmt0);
 
             SsmsEventLoop *loop_{nullptr};
             SsmsRtmpHandshakeContextPtr handshake_;

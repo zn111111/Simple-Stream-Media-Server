@@ -8,6 +8,7 @@
 #include "Live/SsmsSession.h"
 #include "Base/SsmsUtils.h"
 #include "Network/SsmsEventLoop.h"
+#include "SsmsStream.h"
 
 using namespace ssms::media;
 
@@ -92,25 +93,10 @@ int SsmsPublishClient::Process(const SsmsPacketPtr &data, const std::string &com
     return ret;
 }
 
-SsmsPacketPtr SsmsPublishClient::Meta() 
-{
-    return meta_;
-}
-
-SsmsPacketPtr SsmsPublishClient::AudioSequenceHeader()
-{
-    return aac_sequence_header_;
-}
-
-SsmsPacketPtr SsmsPublishClient::VideoSequenceHeader()
-{
-    return avc_sequence_header_;
-}
-
 int SsmsPublishClient::ReleaseStreamResponse(double trans_id)
 {
     //释放可能存在的未释放的流
-    live_manage_->DeleteSession(app_ + "/" + stream_);
+    live_manage_->DeleteSession(app_name_ + "/" + stream_name_);
     std::shared_ptr<SsmsAmf0String> command = std::make_shared<SsmsAmf0String>();
     command->SetValue("_result");
     std::shared_ptr<SsmsAmf0Number> transaction_id = std::make_shared<SsmsAmf0Number>();
@@ -158,14 +144,14 @@ int SsmsPublishClient::FCPublishResponse(double trans_id)
     header->message_type_id = 20;
     header->stream_id = 0;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
-    Addtask(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp FCPublish response";
     return 0;
 }
 
 int SsmsPublishClient::PublishResponse(double trans_id)
 {
-    sess_ = live_manage_->CreateSession(app_ + "/" + stream_);
+    sess_ = live_manage_->CreateSession(app_name_ + "/" + stream_name_);
     sess_->SetProducer(std::dynamic_pointer_cast<SsmsPublishClient>(shared_from_this()));
 
     std::shared_ptr<SsmsAmf0String> command = std::make_shared<SsmsAmf0String>();
@@ -197,7 +183,7 @@ int SsmsPublishClient::PublishResponse(double trans_id)
     header->message_type_id = 20;
     header->stream_id = 0;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
-    Addtask(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send onFCPublish";
 
     command = std::make_shared<SsmsAmf0String>();
@@ -237,7 +223,7 @@ int SsmsPublishClient::PublishResponse(double trans_id)
     header->message_type_id = 20;
     header->stream_id = 0;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
-    Addtask(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send publish response";
 
     return 0;   
@@ -245,63 +231,27 @@ int SsmsPublishClient::PublishResponse(double trans_id)
 
 int SsmsPublishClient::ProcessAudioVideo(const SsmsPacketPtr &data)
 {
-    char *p = data->data;
-    uint32_t remaining_length = data->payload_size_;
-    uint32_t offset = 0;
+    //avc序列尾标志
     int ret = 0;
-
-    //aac序列头
-    if (remaining_length > 2 && FlvAudioFormatAAC == ((*(p + offset) >> 4) & 0x0F) && 0 == *(p + offset + 1))
+    if (data->payload_size_ > 2 && FlvVideoCodecAVC == (*data->data & 0x0F) && 2 == *(data->data + 1))
     {
-        data->Ext<RtmpMessageHeader>()->timestamp = 0;
-        if (!aac_sequence_header_)
-        {
-            aac_sequence_header_ = std::move(data);
-        }
-        else if (aac_sequence_header_->payload_size_ != data->payload_size_ || memcmp(aac_sequence_header_->data, data->data, data->payload_size_))
-        {
-            aac_sequence_header_ = std::move(data);
-            sess_->SendDataToConsumers(data);
-        }
+        LOG_DEBUG << "AVC end of sequence";
+        return ret;
     }
-    //aac原始数据
-    else if (remaining_length > 2 && FlvAudioFormatAAC == ((*(p + offset) >> 4) & 0x0F) && 1 == *(p + offset + 1))
+
+    if (data->IsAudio() && !data->IsAudioSequenceHeader())
     {
         data->Ext<RtmpMessageHeader>()->timestamp = pre_audio_timestamp;
         pre_audio_timestamp += a_frame_interval;
-        sess_->SendDataToConsumers(data);
     }
-    //avc序列头
-    else if (remaining_length > 2 && FlvVideoCodecAVC == (*(p + offset) & 0x0F) && 0 == *(p + offset + 1))
-    {
-        data->Ext<RtmpMessageHeader>()->timestamp = 0;
-        if (!avc_sequence_header_)
-        {
-            avc_sequence_header_ = std::move(data);
-        }
-        else if (avc_sequence_header_->payload_size_ != data->payload_size_ || memcmp(avc_sequence_header_->data, data->data, data->payload_size_))
-        {
-            avc_sequence_header_ = std::move(data);
-            sess_->SendDataToConsumers(data);
-        }
-    }
-    //avc原始数据
-    else if (remaining_length > 2 && FlvVideoCodecAVC == (*(p + offset) & 0x0F) && 1 == *(p + offset + 1))
+    else if (data->IsVideo() && !data->IsVideoSequenceHeader())
     {
         data->Ext<RtmpMessageHeader>()->timestamp = pre_video_timestamp;
         pre_video_timestamp += v_frame_interval;
-        sess_->SendDataToConsumers(data);
     }
-    //avc序列尾标志
-    else if (remaining_length > 2 && FlvVideoCodecAVC == (*(p + offset) & 0x0F) && 2 == *(p + offset + 1))
-    {
-        LOG_DEBUG << "AVC end of sequence";
-    }
-    else
-    {
-        LOG_DEBUG << "unsupported audio video data format";
-        ret = -1;
-    }
+    SsmsStreamPtr stream = sess_->Stream();
+    stream->Push(data);
+    sess_->ActiveAll();
 
     return ret;
 }
@@ -357,14 +307,16 @@ int SsmsPublishClient::ParseSetDataFrame(const SsmsPacketPtr &data, uint32_t off
         a_frame_interval = 1000 * 1024 / sample_rate;
     }
 
-    meta_ = std::move(data);
+    SsmsStreamPtr stream = sess_->Stream();
+    stream->Push(data);
 
     return 0;
 }
 
-void SsmsPublishClient::Addtask(const SsmsPacketPtr &pkt, bool fmt0)
+void SsmsPublishClient::PostMessage(const SsmsPacketPtr &pkt, bool fmt0)
 {
-    loop_->AddTask([this, pkt, fmt0] {
-        context_->BuildChunk(std::move(pkt), fmt0);
+    loop_->AddTask([this, pkt] () {
+        context_->BuildChunk(pkt, true);
+        context_->SendNodes();
     });
 }

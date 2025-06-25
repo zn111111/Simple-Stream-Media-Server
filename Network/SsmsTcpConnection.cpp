@@ -263,20 +263,30 @@ void TcpConnection::SendNodes(const std::list<BufferNodePtr> &iovecs)
         }
         else
         {
-            while (ret > 0)
+            int i = 0;
+            int size = 0;
+            for (; i < iovecs_.size(); i++)
             {
-                if (ret < iovecs_[0].iov_len)
+                size += iovecs_[i].iov_len;
+                if (size < ret)
                 {
-                    iovecs_[0].iov_base = (char *)(iovecs_[0].iov_base) + ret;
-                    iovecs_[0].iov_len -= ret;
+                    continue;
+                }
+                else if (size == ret)
+                {
+                    i++;
                     break;
                 }
                 else
                 {
-                    ret -= iovecs_[0].iov_len;
-                    iovecs_.erase(iovecs_.begin());
+                    int to_be_send_bytes = size - ret;
+                    int sended_bytes = iovecs_[0].iov_len - to_be_send_bytes;
+                    iovecs_[i].iov_base = (char *)(iovecs_[0].iov_base) + sended_bytes;
+                    iovecs_[i].iov_len = to_be_send_bytes;
+                    break;
                 }
             }
+            iovecs_.erase(iovecs_.begin(), iovecs_.begin() + i);
         }
     }
 

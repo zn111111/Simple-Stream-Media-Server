@@ -37,3 +37,25 @@ bool SsmsUtils::Compare(double d1, double d2, double eps)
 {
     return (std::abs(d1 - d2) < eps);
 }
+
+std::string SsmsUtils::GetParentDirWithFilename(const std::string &filepath)
+{
+    int pos = filepath.size() - 1;
+    int end_pos = filepath.size() - 1;
+    if (filepath.empty())
+    {
+        return filepath;
+    }
+    else if ('/' == filepath[pos])
+    {
+        pos--;
+        end_pos--;
+    }
+
+    if ((pos = filepath.rfind('/', pos)) == std::string::npos || (pos = filepath.rfind('/', pos - 1)) == std::string::npos)
+    {
+        return filepath;
+    }
+
+    return filepath.substr(pos + 1, end_pos - pos);
+}

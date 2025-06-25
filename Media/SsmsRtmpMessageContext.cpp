@@ -58,6 +58,11 @@ void SsmsRtmpMessageContext::ClearSendCompleteData()
     sending_pkts_.clear();
     sending_nodes_.clear();
     sending_curr_ = 0;
+    SsmsPlayClientPtr player = std::dynamic_pointer_cast<SsmsPlayClient>(client_);
+    if (player)
+    {
+        sess_->DeActive(player);
+    }
 }
 
 int SsmsRtmpMessageContext::ParseAmfData(const SsmsPacketPtr &data, uint32_t offset, const std::string &command, SsmsAmf0TypePtr &out_data)
@@ -164,11 +169,11 @@ int SsmsRtmpMessageContext::ParseAmfData(const SsmsPacketPtr &data, uint32_t off
     return ret;
 }
 
-void SsmsRtmpMessageContext::Addtask(const SsmsPacketPtr &pkt, bool fmt0)
+void SsmsRtmpMessageContext::PostMessage(const SsmsPacketPtr &pkt, bool fmt0)
 {
-    loop_->AddTask([this, pkt, fmt0] {
-        BuildChunk(std::move(pkt), fmt0);
-        conn_.lock()->SendNodes(sending_nodes_);
+    loop_->AddTask([this, pkt] () {
+        BuildChunk(pkt, true);
+        SendNodes();
     });
 }
 
@@ -503,6 +508,10 @@ int SsmsRtmpMessageContext::ParseCommandMessage(const SsmsPacketPtr &data, uint3
     {
         ret = client_->Process(data, command);
     }
+    else if ("FCSubscribe" == command)
+    {
+        //忽略
+    }
     else
     {
         LOG_DEBUG << "unsupported rtmp command message: " << command;
@@ -531,7 +540,7 @@ int SsmsRtmpMessageContext::ConnectResponse(double transaction_id, const std::st
     header->stream_id = 0;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
     SsmsUtils::Write4BytesBe(pkt->data, 2.5 * 1000 * 1000);
-    Addtask(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp window acknowledgement size";
 
     //SetPeerBandwidth
@@ -545,7 +554,7 @@ int SsmsRtmpMessageContext::ConnectResponse(double transaction_id, const std::st
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
     SsmsUtils::Write4BytesBe(pkt->data, 2.5 * 1000 * 1000);
     SsmsUtils::Write1Byte(pkt->data + 4, 2);
-    Addtask(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp set peer bandwidth";
 
     //SetChunkSize
@@ -558,7 +567,7 @@ int SsmsRtmpMessageContext::ConnectResponse(double transaction_id, const std::st
     header->stream_id = 0;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
     SsmsUtils::Write4BytesBe(pkt->data, 128);
-    Addtask(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp set chunk size";
 
     //connect response
@@ -628,7 +637,7 @@ int SsmsRtmpMessageContext::ConnectResponse(double transaction_id, const std::st
     offset += object1->Encode(pkt->data + offset);
     offset += object2->Encode(pkt->data + offset);
     offset += ecma_array->Encode(pkt->data + offset);
-    Addtask(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp connect response";
 
     return 0;
@@ -852,6 +861,10 @@ void SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
     }
 
     sending_pkts_.emplace_back(std::move(pkt));
+}
+
+void SsmsRtmpMessageContext::SendNodes()
+{
     conn_.lock()->SendNodes(sending_nodes_);
 }
 
@@ -922,7 +935,7 @@ int SsmsRtmpMessageContext::CreateStreamResponse(double trans_id)
     header->message_type_id = 20;
     header->stream_id = 0;
     pkt->SetExt<RtmpMessageHeader>(std::move(header));
-    Addtask(std::move(pkt), true);
+    PostMessage(std::move(pkt), true);
     LOG_DEBUG << "send rtmp createStream response";
     return 0;
 }
