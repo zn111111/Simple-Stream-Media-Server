@@ -74,10 +74,10 @@ void SsmsAcceptor::OnAccept()
     {
         memset(&addr, 0, len);
         int fd = ::accept4(fd_, (struct sockaddr *)&addr, &len, SOCK_NONBLOCK | SOCK_CLOEXEC);
-        int flag = 1;
-        ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
         if (fd >= 0)
         {
+            int flag = 1;
+            ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
             SsmsNetAddressPtr netaddr = std::make_shared<SsmsNetAddress>();
             if (AF_INET == addr.sin6_family)
             {
@@ -101,7 +101,7 @@ void SsmsAcceptor::OnAccept()
         {
             if (EINTR != errno && EAGAIN != errno && EWOULDBLOCK != errno)
             {
-                LOG_ERROR << "accept connection error";
+                LOG_ERROR << "accept connection error, fd = " << fd << ", " << strerror(errno);
                 OnClose();
             }
             break;
