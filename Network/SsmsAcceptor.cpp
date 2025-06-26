@@ -101,7 +101,7 @@ void SsmsAcceptor::OnAccept()
         {
             if (EINTR != errno && EAGAIN != errno && EWOULDBLOCK != errno)
             {
-                LOG_ERROR << "accept connection error";
+                LOG_ERROR << "accept connection error, " << strerror(errno);
                 OnClose();
             }
             break;
