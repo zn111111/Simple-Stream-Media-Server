@@ -43,7 +43,7 @@ int SsmsPublishClient::Process(const SsmsPacketPtr &data, const std::string &com
         case RtmpMessageAMF3MetaData:
             offset += 1;
         case RtmpMessageAMF0MetaData:
-            ret = ParseSetDataFrame(data, offset);
+            ret = ParseDataMessage(data, offset);
             break;
         case RtmpMessageAMF3Command:
         case RtmpMessageAMF0Command:
@@ -256,52 +256,74 @@ int SsmsPublishClient::ProcessAudioVideo(const SsmsPacketPtr &data)
     return ret;
 }
 
-int SsmsPublishClient::ParseSetDataFrame(const SsmsPacketPtr &data, uint32_t offset)
+int SsmsPublishClient::ParseDataMessage(const SsmsPacketPtr &data, uint32_t offset)
 {
     RtmpMessageHeader header = *(data->Ext<RtmpMessageHeader>());
     char *p = data->data;
     if (data->payload_size_ < offset)
     {
-        LOG_DEBUG << "SetDataFrame data format error";
+        LOG_DEBUG << "Data message format error";
         return -1;
     }
+
     uint16_t len = 0;
-    if (offset + 3 > data->payload_size_
-        || Amf0String != (uint8_t)*(p + offset)
-        || (len = ::ntohs(*(uint16_t *)(p + offset + 1))) > data->payload_size_ - offset - 3)
+    bool is_meta_data = false;
+    while (offset + 3 <= data->payload_size_ && Amf0String == *(uint8_t *)(p + offset))
     {
-        LOG_DEBUG << "SetDataFrame data format error";
+        offset++;
+        len = ::ntohs(*(uint16_t *)(p + offset));
+        offset += 2;
+        if (offset + len > data->payload_size_)
+        {
+            LOG_DEBUG << "Data message format error";
+            return -1;    
+        }
+
+        if (len == META_DATA_FLAG_SIZE && !memcmp(p + offset, META_DATA_FLAG, META_DATA_FLAG_SIZE))
+        {
+            offset += len;
+            is_meta_data = true;
+            break;
+        }
+        else
+        {
+            offset += len;
+        }
+    }
+    if (!is_meta_data)
+    {
+        LOG_DEBUG << "Data message format error, is not meta data";
         return -1;
     }
-    offset += len + 3;
-    if (offset + 3 > data->payload_size_
-        || Amf0String != (uint8_t)*(p + offset)
-        || (len = ::ntohs(*(uint16_t *)(p + offset + 1))) > data->payload_size_ - offset - 3)
+
+    int marker = 0;
+    if (offset + 1 > data->payload_size_ || (Amf0EcmaArray != (marker = (uint8_t)*(p + offset)) && Amf0Object != marker))
     {
-        LOG_DEBUG << "SetDataFrame data format error";
-        return -1;
-    }
-    offset += len + 3;
-    if (offset + 1 > data->payload_size_ || Amf0EcmaArray != (uint8_t)*(p + offset))
-    {
-        LOG_DEBUG << "SetDataFrame data format error";
+        LOG_DEBUG << "Data message format error, marker is " << marker;
         return -1;
     }
     offset++;
-
-    std::shared_ptr<ssms::media::SsmsAmf0EcmaArray> s_ecma = std::make_shared<SsmsAmf0EcmaArray>();
-    if (s_ecma->Parse(data->data + offset, data->payload_size_ - offset) < 0)
+    std::shared_ptr<ssms::media::SsmsAmf0Type> amf_data;
+    if (Amf0EcmaArray == marker)
+    {
+         amf_data = std::make_shared<SsmsAmf0EcmaArray>();
+    }
+    else
+    {
+        amf_data = std::make_shared<SsmsAmf0Object>();
+    }
+    if (amf_data->Parse(data->data + offset, data->payload_size_ - offset) < 0)
     {
         LOG_DEBUG << "SetDataFrame data format error";
         return -1;
     }
     uint16_t frame_rate = 0, sample_rate = 0;
     std::string s_frame_rate, s_sample_rate;
-    if (!(s_frame_rate = s_ecma->GetProperty("framerate")).empty() && (frame_rate = atoi(s_frame_rate.c_str())) > 0)
+    if (!(s_frame_rate = amf_data->GetProperty("framerate")).empty() && (frame_rate = atoi(s_frame_rate.c_str())) > 0)
     {
         v_frame_interval = 1000 / frame_rate;
     }
-    if (!(s_sample_rate = s_ecma->GetProperty("audiosamplerate")).empty() && (sample_rate = atoi(s_sample_rate.c_str())) > 0)
+    if (!(s_sample_rate = amf_data->GetProperty("audiosamplerate")).empty() && (sample_rate = atoi(s_sample_rate.c_str())) > 0)
     {
         //支支持aac, 1024是aac的每帧采样点的数量
         a_frame_interval = 1000 * 1024 / sample_rate;

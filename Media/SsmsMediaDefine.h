@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <stdint.h>
+#include <string.h>
 
 namespace ssms
 {
@@ -54,6 +55,9 @@ namespace ssms
         const int AUDIO_DEFAULT_DELTA = 23;
         //视频默认间隔
         const int VIDEO_DEFAULT_DELTA = 40;
+
+        const char META_DATA_FLAG[] = "onMetaData";
+        const int META_DATA_FLAG_SIZE = strlen(META_DATA_FLAG);
 
         enum RtmpHandshakeState
         {

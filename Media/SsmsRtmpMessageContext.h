@@ -38,7 +38,7 @@ namespace ssms
             int ParseUserControlMessage(const SsmsPacketPtr &data);
             int ParseWindowAcknowledgementSize(const SsmsPacketPtr &data);
             int ProcessAudioVideo(const SsmsPacketPtr &data);
-            int ParseSetDataFrame(const SsmsPacketPtr &data);
+            int ParseDataMessage(const SsmsPacketPtr &data);
             int CreateStreamResponse(double trans_id);
             void ClearSendCompleteData() override;
             //解析Amf编码的数据, 如果有匹配的command, 默认会解析流名称, 否则out_data是SsmsAmf0Object或者SsmsAmf0EcmaArray

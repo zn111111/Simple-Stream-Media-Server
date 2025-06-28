@@ -380,7 +380,7 @@ int SsmsRtmpMessageContext::ParseAssembledMessage(const SsmsPacketPtr &data)
             break;
         case RtmpMessageAMF3MetaData:
         case RtmpMessageAMF0MetaData:
-            ret = ParseSetDataFrame(data);
+            ret = ParseDataMessage(data);
             break;
         case RtmpMessageAMF3Command:
             offset += 1;
@@ -940,7 +940,7 @@ int SsmsRtmpMessageContext::CreateStreamResponse(double trans_id)
     return 0;
 }
 
-int SsmsRtmpMessageContext::ParseSetDataFrame(const SsmsPacketPtr &data)
+int SsmsRtmpMessageContext::ParseDataMessage(const SsmsPacketPtr &data)
 {
     return client_->Process(data, "");
 }

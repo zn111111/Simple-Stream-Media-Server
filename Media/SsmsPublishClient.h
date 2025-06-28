@@ -28,7 +28,7 @@ namespace ssms
             int FCPublishResponse(double trans_id);
             int PublishResponse(double trans_id);
             int ProcessAudioVideo(const SsmsPacketPtr &data);
-            int ParseSetDataFrame(const SsmsPacketPtr &data, uint32_t offset);
+            int ParseDataMessage(const SsmsPacketPtr &data, uint32_t offset);
             void PostMessage(const SsmsPacketPtr &pkt, bool fmt0);
 
             //上次音频的时间戳
