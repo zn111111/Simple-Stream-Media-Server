@@ -16,7 +16,7 @@ namespace ssms
         class SsmsTcpServer : public NonCopyable
         {
         public:
-            SsmsTcpServer(SsmsEventLoop *loop, const SsmsNetAddressPtr &local_addr, SsmsLiveManagmentPtr &live_manage);
+            SsmsTcpServer(SsmsEventLoop *loop, const SsmsNetAddressPtr &local_addr, const SsmsLiveManagmentPtr &live_manage);
             virtual ~SsmsTcpServer();
             
             //上层业务设置接收完数据后执行的回调

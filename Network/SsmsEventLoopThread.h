@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <mutex>
 #include "Base/NonCopyable.h"
+#include "SsmsNetworkDefine.h"
 
 using namespace ssms::base;
 
@@ -20,13 +21,14 @@ namespace ssms
             ~SsmsEventLoopThread();
 
             SsmsEventLoop *Loop() const;
-            void Run();
+            void Run(const SsmsNetAddressPtr &local_addr, const SsmsLiveManagmentPtr &live_manage);
             void Stop();
         private:
             void OnStart();
 
             SsmsEventLoop *loop_{nullptr};
             std::thread thread_;
+            SsmsTcpServerPtr tcp_server_;
             std::condition_variable condition_;
             std::mutex lock_;
             bool is_looping_{false};

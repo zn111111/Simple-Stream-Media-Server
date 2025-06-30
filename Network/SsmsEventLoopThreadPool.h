@@ -16,7 +16,7 @@ namespace ssms
             SsmsEventLoopThreadPool();
             ~SsmsEventLoopThreadPool();
 
-            void Start();
+            void Start(const ssms::nw::SsmsNetAddressPtr &local_addr, const ssms::live::SsmsLiveManagmentPtr &live_manage);
             SsmsEventLoopThreadPtr GetNextThread();
             uint32_t GetThreadNums() const;
         private:

@@ -1,5 +1,6 @@
 #include "SsmsEventLoopThread.h"
 #include "SsmsEventLoop.h"
+#include "SsmsTcpServer.h"
 
 using namespace ssms::nw;
 
@@ -14,7 +15,7 @@ SsmsEventLoopThread::SsmsEventLoopThread()
 //线程, 导致线程无法退出
 SsmsEventLoopThread::~SsmsEventLoopThread()
 {
-    Run();
+    Run(nullptr, nullptr);
     if (loop_)
     {
         loop_->Stop();
@@ -37,9 +38,9 @@ SsmsEventLoop *SsmsEventLoopThread::Loop() const
 //Run运行完直接退出可能导致OnStart里的loop_ = &loop赋值
 //还没有完成, 导致其他线程获取到的SsmsEventLoop指针为空
 //因此, 这里使用promise_阻塞等待OnStart里调用set_value设置值
-void SsmsEventLoopThread::Run()
+void SsmsEventLoopThread::Run(const SsmsNetAddressPtr &local_addr, const SsmsLiveManagmentPtr &live_manage)
 {
-    std::call_once(once_, [this] () {
+    std::call_once(once_, [this, local_addr, live_manage] () {
         {
             std::lock_guard<std::mutex> lk(lock_);
             is_looping_ = true;
@@ -47,6 +48,9 @@ void SsmsEventLoopThread::Run()
         }
         auto f = promise_.get_future();
         f.get();
+
+        tcp_server_ = std::make_shared<SsmsTcpServer>(loop_, local_addr, live_manage);
+        tcp_server_->Start();
     });
 }
 

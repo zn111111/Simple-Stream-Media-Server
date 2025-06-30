@@ -5,8 +5,10 @@
 #include "Network/SsmsTcpConnection.h"
 #include "Base/SsmsLogStream.h"
 #include "Network/SsmsNetAddress.h"
+#include "Live/SsmsLiveManagment.h"
 
 using namespace ssms::nw;
+using namespace ssms::live;
 
 HttpContextTest::HttpContextTest(const TcpConnectionPtr &conn)
 : conn_(conn)
@@ -23,9 +25,10 @@ int HttpContextTest::Parse(const SsmsBufferPtr &data)
 
 void TestRead()
 {
-    SsmsEventLoopThread loop;
-    loop.Run();
     SsmsNetAddressPtr addr = std::make_shared<SsmsNetAddress>("0.0.0.0", 1935, true);
+    SsmsLiveManagmentPtr manage = std::make_shared<SsmsLiveManagment>();
+    SsmsEventLoopThread loop;
+    loop.Run(addr, manage);
     SsmsAcceptorPtr acceptor = std::make_shared<SsmsAcceptor>(loop.Loop(), addr, SsmsServerProtocolRTMP);
     acceptor->SetAcceptCallback([] (SsmsEventLoop *loop, int fd, const SsmsNetAddressPtr &local, const SsmsNetAddressPtr &remote, SsmsServerProtocol protocol) {
         TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop, local, remote, fd);

@@ -16,12 +16,12 @@ SsmsEventLoopThreadPool::~SsmsEventLoopThreadPool()
 
 }
 
-void SsmsEventLoopThreadPool::Start()
+void SsmsEventLoopThreadPool::Start(const ssms::nw::SsmsNetAddressPtr &local_addr, const ssms::live::SsmsLiveManagmentPtr &live_manage)
 {
     for (int i = 0; i < thread_nums_; i++)
     {
         SsmsEventLoopThreadPtr thread = std::make_shared<SsmsEventLoopThread>();
-        thread->Run();
+        thread->Run(local_addr, live_manage);
         threads_[i] = thread;
     }
 }

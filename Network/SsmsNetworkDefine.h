@@ -40,5 +40,11 @@ namespace ssms
         using BusinessWriteCompleteCallback = std::function<void (const SsmsContextPtr &)>;
 
         using BufferNodePtr = std::shared_ptr<struct iovec>;
+
+        class SsmsTcpServer;
+        using SsmsTcpServerPtr = std::shared_ptr<SsmsTcpServer>;
+
+        class SsmsEventLoopThreadPool;
+        using SsmsEventLoopThreadPoolPtr = std::unique_ptr<SsmsEventLoopThreadPool>;
     }
 }

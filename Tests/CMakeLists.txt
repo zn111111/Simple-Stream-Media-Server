@@ -9,3 +9,4 @@ include_directories(../)
 
 file(GLOB files CONFIGURE_DEPENDS ./*.cpp ../Base/*.c ../Base/*.cpp ../Network/*.cpp ../Media/*.cpp ../Live/*.cpp)
 add_executable(${EXE_FILE_NAME} ${files})
+target_link_libraries(${EXE_FILE_NAME} PUBLIC pthread)

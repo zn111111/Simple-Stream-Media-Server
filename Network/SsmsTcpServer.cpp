@@ -5,7 +5,7 @@
 
 using namespace ssms::nw;
 
-SsmsTcpServer::SsmsTcpServer(SsmsEventLoop *loop, const SsmsNetAddressPtr &local_addr, SsmsLiveManagmentPtr &live_manage)
+SsmsTcpServer::SsmsTcpServer(SsmsEventLoop *loop, const SsmsNetAddressPtr &local_addr, const SsmsLiveManagmentPtr &live_manage)
 : loop_(loop)
 , rtmp_acceptor_(std::make_shared<SsmsAcceptor>(loop, local_addr, SsmsServerProtocolRTMP))
 , live_manage_(live_manage)
