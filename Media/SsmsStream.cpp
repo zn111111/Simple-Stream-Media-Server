@@ -64,7 +64,8 @@ void SsmsStream::Pop(const SsmsPlayClientPtr &player)
         idx = gop_manage_->GetGopByLatency(content_latency);
         LOG_DEBUG << "packet expired or latency is too high, latest video frame timestamp " << gop_manage_->LatestTimeStamp()
                     << ", client out latest video frame timestamp " << player->out_video_timestamp_
-                    << ", expired packet index max value " << ExpiredPacketIndex() << ", client request packet index " << src_idx;
+                    << ", expired packet index max value " << ExpiredPacketIndex() << ", client request packet index " << src_idx
+                    << ", skip frame from index " << src_idx << "to index " << idx;
     }
 
     //头部更新则发新的头部
