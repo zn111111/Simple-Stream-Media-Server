@@ -43,6 +43,7 @@ void SsmsEventLoop::OnWork()
                 const struct epoll_event &ev = epoll_events_[i];
                 if (ev.events & EPOLLERR)
                 {
+                    LOG_DEBUG << "error event occurred";
                     events_[ev.data.fd]->OnError();
                 }
                 else if ((ev.events & EPOLLHUP) && !(ev.events & EPOLLIN))
