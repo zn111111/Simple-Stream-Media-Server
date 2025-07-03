@@ -171,7 +171,7 @@ void TcpConnection::OnError()
     int err = 0;
     socklen_t len = sizeof(err);
     ::getsockopt(fd_, SOL_SOCKET, SO_ERROR, &err, &len);
-    LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << " error, " << strerror(err);
+    LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << ", fd " << fd_ << ", error: " << strerror(err);
     OnClose();
 }
 
