@@ -56,7 +56,7 @@ void TcpConnection::OnRead()
 {
     if (closed_)
     {
-        LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << " closed";
+        LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << ", fd " << fd_ << ", closed";
         return;
     }
 
@@ -75,7 +75,7 @@ void TcpConnection::OnRead()
         }
         else if (0 == ret)
         {
-            LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << " closed";
+            LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << ", fd " << fd_ << ", closed";
             OnClose();
             break;
         }
@@ -101,7 +101,7 @@ void TcpConnection::OnWrite()
 {
     if (closed_)
     {
-        LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << " closed";
+        LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << ", fd " << fd_ << ", closed";
         return;
     }
 
@@ -164,6 +164,7 @@ void TcpConnection::OnClose()
     {
         close_callback_(std::dynamic_pointer_cast<TcpConnection>(shared_from_this()));
     }
+    SsmsEvent::OnClose();
 }
 
 void TcpConnection::OnError()
@@ -236,7 +237,7 @@ void TcpConnection::SendNodes(const std::list<BufferNodePtr> &iovecs)
 {
     if (closed_)
     {
-        LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << " closed";
+        LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << ", fd " << fd_ << ", closed";
         return;
     }
 
