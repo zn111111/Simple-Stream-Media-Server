@@ -68,6 +68,7 @@ void TcpConnection::OnRead()
         {
             if (EINTR != err && EAGAIN != err && EWOULDBLOCK != err)
             {
+                LOG_ERROR << "read error, " << strerror(errno);
                 OnError();
             }
             break;
@@ -211,6 +212,7 @@ void TcpConnection::OnSendPkt(char *data, uint32_t len)
         {
             if (EINTR != errno && EAGAIN != errno && EWOULDBLOCK != errno)
             {
+                LOG_ERROR << "send packet errror, " << strerror(errno);
                 OnError();
                 return;
             }
