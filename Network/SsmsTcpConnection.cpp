@@ -152,7 +152,7 @@ void TcpConnection::OnClose()
     loop_->DeleteEvent(fd_);
     SsmsPlayClientPtr player = std::dynamic_pointer_cast<SsmsPlayClient>(context_->client_);
     SsmsPublishClientPtr publisher = std::dynamic_pointer_cast<SsmsPublishClient>(context_->client_);
-    if (player)
+    if (player && player->sess_)
     {
         player->sess_->DeleteConsumer(player);
     }
