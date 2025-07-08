@@ -6,6 +6,7 @@
 #include <mutex>
 #include <queue>
 #include <functional>
+#include <list>
 #include "Base/NonCopyable.h"
 #include "SsmsNetworkDefine.h"
 
@@ -46,6 +47,7 @@ namespace ssms
             std::mutex lock_;
             //任务队列
             std::queue<TaskCallback> tasks_;
+            std::list<TaskCallback> tasks_copy_;
         };
     }
 }

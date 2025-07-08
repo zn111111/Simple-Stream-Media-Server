@@ -195,11 +195,21 @@ void SsmsEventLoop::EnableWriteEvent(const SsmsEventPtr &event, bool enable)
 
 void SsmsEventLoop::ProcessTask()
 {
-    std::lock_guard<std::mutex> lk(lock_);
-    while (!tasks_.empty())
+    //防止出现死锁, 因为执行任务时发送数据失败会删除consumer, 此时又会获取锁
     {
-        auto &f = tasks_.front();
-        f();
-        tasks_.pop();
+        std::lock_guard<std::mutex> lk(lock_);
+        while (!tasks_.empty())
+        {
+            auto &f = tasks_.front();
+            tasks_copy_.emplace_back(std::move(f));
+            tasks_.pop();
+        }
+    }
+
+    auto it = tasks_copy_.begin();
+    while (it != tasks_copy_.end())
+    {
+        (*it)();
+        it = tasks_copy_.erase(it);
     }
 }
