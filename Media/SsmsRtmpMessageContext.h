@@ -27,7 +27,7 @@ namespace ssms
             int Parse(const SsmsBufferPtr &data) override;
             //将pkt拆分成一个个chunk, 存在sending_nodes_中
             //控制消息第一个chunk必须是fmt0, 但是音视频消息可以根据实际情况选择是否使用fmt0
-            void BuildChunk(const SsmsPacketPtr &pkt, bool fmt0);
+            bool BuildChunk(const SsmsPacketPtr &pkt, bool fmt0);
             void SendNodes();
         private:
             int ParseMessage(const SsmsBufferPtr &data);
@@ -62,7 +62,7 @@ namespace ssms
             //客户端的确认窗口大小
             uint32_t client_window_ack_size_{0};
             //正在发送的数据的头部, 只用于存储待发送数据的rtmp头部
-            char sending_[4096]{0};
+            char sending_[10240]{0};
             //sending_当前位置索引
             uint32_t sending_curr_{0};
             //待发送队列

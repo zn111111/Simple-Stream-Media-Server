@@ -3,6 +3,7 @@
 #include <atomic>
 #include <vector>
 #include <mutex>
+#include <list>
 #include "SsmsClient.h"
 #include "Live/SsmsLiveDefine.h"
 #include "Network/SsmsNetworkDefine.h"
@@ -46,7 +47,7 @@ namespace ssms
             //已经发送的最新的视频帧的时间戳
             uint32_t out_video_timestamp_{0};
             //等待发送的包
-            std::vector<SsmsPacketPtr> out_packet_;
+            std::list<SsmsPacketPtr> out_packet_;
             //元数据
             SsmsPacketPtr meta_;
             //aac序列头

@@ -87,7 +87,10 @@ void SsmsPlayClient::Play()
 {
     SsmsStreamPtr stream = sess_->Stream();
 
-    stream->Pop(std::dynamic_pointer_cast<SsmsPlayClient>(shared_from_this()));
+    if (out_packet_.empty())
+    {
+        stream->Pop(std::dynamic_pointer_cast<SsmsPlayClient>(shared_from_this()));
+    }
     if (meta_)
     {
         context_->BuildChunk(meta_, true);
@@ -104,18 +107,24 @@ void SsmsPlayClient::Play()
         avc_sequence_header_.reset();
     }
 
-    for (int i = 0; i < out_packet_.size(); i++)
+    for (auto it = out_packet_.begin(); it != out_packet_.end();)
     {
-        uint32_t corrected_timestamp = corrector_->CorrectTimestamp(out_packet_[i]);
-        out_packet_[i]->SetTimestamp(corrected_timestamp);
-        context_->BuildChunk(out_packet_[i], true);
-        //out_packet_里不会有头部, 这里就不加头部的判断了
-        if (out_packet_[i]->IsVideo())
+        uint32_t corrected_timestamp = corrector_->CorrectTimestamp(*it);
+        (*it)->SetTimestamp(corrected_timestamp);
+        if (context_->BuildChunk(*it, true))
         {
-            out_video_timestamp_ = corrected_timestamp;
+            //out_packet_里不会有头部, 这里就不加头部的判断了
+            if ((*it)->IsVideo())
+            {
+                out_video_timestamp_ = corrected_timestamp;
+            }
+            it = out_packet_.erase(it);
+        }
+        else
+        {
+            break;
         }
     }
-    out_packet_.clear();
     context_->SendNodes();
 }
 

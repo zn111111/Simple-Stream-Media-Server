@@ -643,13 +643,27 @@ int SsmsRtmpMessageContext::ConnectResponse(double transaction_id, const std::st
     return 0;
 }
 
-void SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
+bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
 {
     RtmpMessageHeaderPtr header = pkt->Ext<RtmpMessageHeader>();
     if (!header)
     {
         LOG_ERROR << "rtmp header is nullptr";
-        return;
+        return false;
+    }
+
+    //判断packet所需的头部总大小是否超过sending_的剩余空间大小, 超过则下次再发
+    int chunk_nums = pkt->payload_size_ / s_chunk_size_ + ((pkt->payload_size_ % s_chunk_size_) == 0 ? 0 : 1);
+    int rtmp_header_total_size = 18;
+    if (chunk_nums > 1)
+    {
+        rtmp_header_total_size += (chunk_nums - 1) * 8;
+    }
+    //basic header最大3 bytes, extended timaestamp 4 bytes
+    if (sending_curr_ + rtmp_header_total_size >= sizeof(sending_))
+    {
+        LOG_DEBUG << "rtmp header data is large than buffer";
+        return false;
     }
 
     bool has_csid = true;
@@ -685,13 +699,6 @@ void SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
         fmt = RTMPFmt3;
     }
 
-    //basic header最大3 bytes, extended timaestamp 4 bytes
-    if (sending_curr_ + msg_header_size + 7 >= sizeof(sending_))
-    {
-        LOG_ERROR << "rtmp header data is large than buffer";
-        return;
-    }
-
     if (fmt != RTMPFmt0)
     {
         prev_timestamp_deltas_[header->csid] = prev_timestamp_delta;
@@ -718,7 +725,7 @@ void SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
     else
     {
         LOG_ERROR << "csid error, greater than 65599";
-        return;
+        return false;
     }
     if (RTMPFmt0 == fmt)
     {
@@ -826,7 +833,7 @@ void SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
         if (sending_curr_ + 8 >= sizeof(sending_))
         {
             LOG_ERROR << "rtmp header data is large than buffer";
-            return;
+            return false;
         }
 
         //后续chunk使用fmt3
@@ -861,6 +868,7 @@ void SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
     }
 
     sending_pkts_.emplace_back(std::move(pkt));
+    return true;
 }
 
 void SsmsRtmpMessageContext::SendNodes()
