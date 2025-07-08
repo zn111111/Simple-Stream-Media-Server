@@ -86,7 +86,8 @@ void SsmsStream::Pop(const SsmsPlayClientPtr &player)
         player->meta_header_version_++;
     }
 
-    for (int i = 0; i < 30; i++)
+    //一次取的包太少会导致频繁跳帧
+    for (int i = 0; i < 90; i++)
     {
         if (idx >= max_idx)
         {
