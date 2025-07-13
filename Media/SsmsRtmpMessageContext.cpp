@@ -172,7 +172,7 @@ int SsmsRtmpMessageContext::ParseAmfData(const SsmsPacketPtr &data, uint32_t off
 void SsmsRtmpMessageContext::PostMessage(const SsmsPacketPtr &pkt, bool fmt0)
 {
     loop_->AddTask([this, pkt] () {
-        BuildChunk(pkt, true);
+        BuildChunk(pkt, pkt->Timestamp(), true);
         SendNodes();
     });
 }
@@ -643,7 +643,7 @@ int SsmsRtmpMessageContext::ConnectResponse(double transaction_id, const std::st
     return 0;
 }
 
-bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
+bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, uint32_t timestamp, bool fmt0)
 {
     RtmpMessageHeaderPtr header = pkt->Ext<RtmpMessageHeader>();
     if (!header)
@@ -652,6 +652,10 @@ bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
         return false;
     }
 
+    int csid = header->csid;
+    uint32_t payload_len = header->payload_len;
+    uint8_t message_type_id = header->message_type_id;
+    uint32_t stream_id = header->stream_id;
     //判断packet所需的头部总大小是否超过sending_的剩余空间大小, 超过则下次再发
     int chunk_nums = pkt->payload_size_ / s_chunk_size_ + ((pkt->payload_size_ % s_chunk_size_) == 0 ? 0 : 1);
     int rtmp_header_total_size = 18;
@@ -667,29 +671,28 @@ bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
     }
 
     bool has_csid = true;
-    RtmpMessageHeaderPtr prev = prev_send_headers_[header->csid];
-    if (!prev)
+    if (prev_send_headers_.find(csid) == prev_send_headers_.end())
     {
         has_csid = false;
-        prev_send_headers_[header->csid] = std::make_shared<struct RtmpMessageHeader>();
-        prev = prev_send_headers_[header->csid];
+        prev_send_headers_[csid] = std::make_shared<struct RtmpMessageHeader>();
     }
-    header->timestamp_delta = header->timestamp - prev->timestamp;
+    RtmpMessageHeaderPtr prev = prev_send_headers_[csid];
+    uint32_t timestamp_delta = timestamp - prev->timestamp;
 
     uint8_t fmt = 0;
     uint8_t msg_header_size = 0;
-    uint32_t prev_timestamp_delta = prev_timestamp_deltas_[header->csid];
-    if (fmt0 || !has_csid || prev->timestamp > header->timestamp)
+    uint32_t prev_timestamp_delta = prev_timestamp_deltas_[csid];
+    if (fmt0 || !has_csid || prev->timestamp > timestamp)
     {
         fmt = RTMPFmt0;
         msg_header_size = 11;
     }
-    else if (header->timestamp_delta != prev_timestamp_delta && header->payload_len != prev->payload_len && header->message_type_id != prev->message_type_id)
+    else if (timestamp_delta != prev_timestamp_delta && payload_len != prev->payload_len && message_type_id != prev->message_type_id)
     {
         fmt = RTMPFmt1;
         msg_header_size = 7;
     }
-    else if (header->timestamp_delta != prev_timestamp_delta)
+    else if (timestamp_delta != prev_timestamp_delta)
     {
         fmt = RTMPFmt2;
         msg_header_size = 3;
@@ -701,25 +704,25 @@ bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
 
     if (fmt != RTMPFmt0)
     {
-        prev_timestamp_deltas_[header->csid] = prev_timestamp_delta;
+        prev_timestamp_deltas_[csid] = timestamp_delta;
     }
 
     //第一个chunk的头部
     uint32_t offset_header_start = sending_curr_;
     char *p = sending_;
-    if (header->csid <= 63)
+    if (csid <= 63)
     {
-        *(p + sending_curr_++) = (fmt << 6 | header->csid);
+        *(p + sending_curr_++) = (fmt << 6 | csid);
     }
-    else if (header->csid <= 319)
+    else if (csid <= 319)
     {
         *(p + sending_curr_++) = (fmt << 6 | 0x00);
-        *(p + sending_curr_++) = header->csid - 64;
+        *(p + sending_curr_++) = csid - 64;
     }
-    else if (header->csid <= 65599)
+    else if (csid <= 65599)
     {
         *(p + sending_curr_++) = (fmt << 6 | 0x01);
-        *(uint16_t *)(p + sending_curr_) = (uint16_t)(header->csid - 64);
+        *(uint16_t *)(p + sending_curr_) = (uint16_t)(csid - 64);
         sending_curr_ += 2;
     }
     else
@@ -729,76 +732,76 @@ bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
     }
     if (RTMPFmt0 == fmt)
     {
-        uint32_t timestamp;
-        if (header->timestamp >= 0xFFFFFF)
+        uint32_t temp = 0;
+        if (timestamp >= 0xFFFFFF)
         {
-            timestamp = 0xFFFFFF;
+            temp = 0xFFFFFF;
         }
         else
         {
-            timestamp = header->timestamp;
+            temp = timestamp;
         }
-        SsmsUtils::Write3BytesBe(p + sending_curr_, timestamp);
+        SsmsUtils::Write3BytesBe(p + sending_curr_, temp);
         sending_curr_ += 3;
-        SsmsUtils::Write3BytesBe(p + sending_curr_, header->payload_len);
+        SsmsUtils::Write3BytesBe(p + sending_curr_, payload_len);
         sending_curr_ += 3;
-        SsmsUtils::Write1Byte(p + sending_curr_, header->message_type_id);
+        SsmsUtils::Write1Byte(p + sending_curr_, message_type_id);
         sending_curr_ += 1;
-        SsmsUtils::Write4BytesLe(p + sending_curr_, header->stream_id);
+        SsmsUtils::Write4BytesLe(p + sending_curr_, stream_id);
         sending_curr_ += 4;
-        if (header->timestamp >= 0xFFFFFF)
+        if (timestamp >= 0xFFFFFF)
         {
-            SsmsUtils::Write4BytesBe(p + sending_curr_, header->timestamp);
+            SsmsUtils::Write4BytesBe(p + sending_curr_, timestamp);
             sending_curr_ += 4;
         }
     }
     else if (RTMPFmt1 == fmt)
     {
-        uint32_t timestamp;
-        if (header->timestamp_delta >= 0xFFFFFF)
+        uint32_t temp;
+        if (timestamp_delta >= 0xFFFFFF)
         {
-            timestamp = 0xFFFFFF;
+            temp = 0xFFFFFF;
         }
         else
         {
-            timestamp = header->timestamp_delta;
+            temp = timestamp_delta;
         }
-        SsmsUtils::Write3BytesBe(p + sending_curr_, timestamp);
+        SsmsUtils::Write3BytesBe(p + sending_curr_, temp);
         sending_curr_ += 3;
-        SsmsUtils::Write3BytesBe(p + sending_curr_, header->payload_len);
+        SsmsUtils::Write3BytesBe(p + sending_curr_, payload_len);
         sending_curr_ += 3;
-        SsmsUtils::Write1Byte(p + sending_curr_, header->message_type_id);
+        SsmsUtils::Write1Byte(p + sending_curr_, message_type_id);
         sending_curr_ += 1;
-        if (header->timestamp_delta >= 0xFFFFFF)
+        if (timestamp_delta >= 0xFFFFFF)
         {
-            SsmsUtils::Write4BytesBe(p + sending_curr_, header->timestamp_delta);
+            SsmsUtils::Write4BytesBe(p + sending_curr_, timestamp_delta);
             sending_curr_ += 4;
         }
     }
     else if (RTMPFmt2 == fmt)
     {
-        uint32_t timestamp;
-        if (header->timestamp_delta >= 0xFFFFFF)
+        uint32_t temp;
+        if (timestamp_delta >= 0xFFFFFF)
         {
-            timestamp = 0xFFFFFF;
+            temp = 0xFFFFFF;
         }
         else
         {
-            timestamp = header->timestamp_delta;
+            temp = timestamp_delta;
         }
-        SsmsUtils::Write3BytesBe(p + sending_curr_, timestamp);
+        SsmsUtils::Write3BytesBe(p + sending_curr_, temp);
         sending_curr_ += 3;
-        if (header->timestamp_delta >= 0xFFFFFF)
+        if (timestamp_delta >= 0xFFFFFF)
         {
-            SsmsUtils::Write4BytesBe(p + sending_curr_, header->timestamp_delta);
+            SsmsUtils::Write4BytesBe(p + sending_curr_, timestamp_delta);
             sending_curr_ += 4;
         }
     }
     else
     {
-        if (prev_timestamp_delta >= 0xFFFFFF)
+        if (timestamp_delta >= 0xFFFFFF)
         {
-            SsmsUtils::Write4BytesBe(p + sending_curr_, prev_timestamp_delta);
+            SsmsUtils::Write4BytesBe(p + sending_curr_, timestamp_delta);
             sending_curr_ += 4;
         }
     }
@@ -806,11 +809,11 @@ bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
     node->iov_base = p + offset_header_start;
     node->iov_len = sending_curr_ - offset_header_start;
     sending_nodes_.emplace_back(std::move(node));
-    prev->message_type_id = header->message_type_id;
-    prev->payload_len = header->payload_len;
-    prev->stream_id = header->stream_id;
-    prev->timestamp = header->timestamp;
-    prev->timestamp_delta = header->timestamp_delta;
+    prev->message_type_id = message_type_id;
+    prev->payload_len = payload_len;
+    prev->stream_id = stream_id;
+    prev->timestamp = timestamp;
+    prev->timestamp_delta = timestamp_delta;
     offset_header_start = sending_curr_;
 
     uint32_t offset_payload_end = 0;
@@ -829,35 +832,28 @@ bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, bool fmt0)
             break;
         }
 
-        //basic header最大3 bytes, fmt3的message header 1 byte, extended timaestamp 4 bytes
-        if (sending_curr_ + 8 >= sizeof(sending_))
-        {
-            LOG_ERROR << "rtmp header data is large than buffer";
-            return false;
-        }
-
         //后续chunk使用fmt3
         //basic header
-        if (header->csid <= 63)
+        if (csid <= 63)
         {
-            *(p + sending_curr_++) = (fmt << 6 | header->csid);
+            *(p + sending_curr_++) = (fmt << 6 | csid);
         }
-        else if (header->csid <= 319)
+        else if (csid <= 319)
         {
             *(p + sending_curr_++) = (fmt << 6 | 0x00);
-            *(p + sending_curr_++) = header->csid - 64;
+            *(p + sending_curr_++) = csid - 64;
         }
         else
         {
             *(p + sending_curr_++) = (fmt << 6 | 0x01);
-            *(uint16_t *)(p + sending_curr_) = (uint16_t)(header->csid - 64);
+            *(uint16_t *)(p + sending_curr_) = (uint16_t)(csid - 64);
             sending_curr_ += 2;
         }
 
         //message header
-        if (header->timestamp_delta >= 0xFFFFFF)
+        if (timestamp_delta >= 0xFFFFFF)
         {
-            SsmsUtils::Write4BytesBe(p + sending_curr_, header->timestamp_delta);
+            SsmsUtils::Write4BytesBe(p + sending_curr_, timestamp_delta);
             sending_curr_ += 4;
         }
         node = std::make_shared<struct iovec>();

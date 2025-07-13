@@ -241,13 +241,13 @@ int SsmsPublishClient::ProcessAudioVideo(const SsmsPacketPtr &data)
 
     if (data->IsAudio() && !data->IsAudioSequenceHeader())
     {
-        data->Ext<RtmpMessageHeader>()->timestamp = pre_audio_timestamp;
-        pre_audio_timestamp += a_frame_interval;
+        data->SetTimestamp(next_audio_timestamp);
+        next_audio_timestamp += a_frame_interval;
     }
     else if (data->IsVideo() && !data->IsVideoSequenceHeader())
     {
-        data->Ext<RtmpMessageHeader>()->timestamp = pre_video_timestamp;
-        pre_video_timestamp += v_frame_interval;
+        data->SetTimestamp(next_video_timestamp);
+        next_video_timestamp += v_frame_interval;
     }
     SsmsStreamPtr stream = sess_->Stream();
     stream->Push(data);
@@ -338,7 +338,7 @@ int SsmsPublishClient::ParseDataMessage(const SsmsPacketPtr &data, uint32_t offs
 void SsmsPublishClient::PostMessage(const SsmsPacketPtr &pkt, bool fmt0)
 {
     loop_->AddTask([this, pkt] () {
-        context_->BuildChunk(pkt, true);
+        context_->BuildChunk(pkt, pkt->Timestamp(), true);
         context_->SendNodes();
     });
 }

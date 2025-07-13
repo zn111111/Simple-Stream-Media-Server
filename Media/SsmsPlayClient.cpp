@@ -93,30 +93,29 @@ void SsmsPlayClient::Play()
     }
     if (meta_)
     {
-        context_->BuildChunk(meta_, true);
+        context_->BuildChunk(meta_, 0, true);
         meta_.reset();
     }
     if (aac_sequence_header_)
     {
-        context_->BuildChunk(aac_sequence_header_, true);
+        context_->BuildChunk(aac_sequence_header_, 0, true);
         aac_sequence_header_.reset();
     }
     if (avc_sequence_header_)
     {
-        context_->BuildChunk(avc_sequence_header_, true);
+        context_->BuildChunk(avc_sequence_header_, 0, true);
         avc_sequence_header_.reset();
     }
 
     for (auto it = out_packet_.begin(); it != out_packet_.end();)
     {
         uint32_t corrected_timestamp = corrector_->CorrectTimestamp(*it);
-        (*it)->SetTimestamp(corrected_timestamp);
-        if (context_->BuildChunk(*it, true))
+        if (context_->BuildChunk(*it, corrected_timestamp, true))
         {
             //out_packet_里不会有头部, 这里就不加头部的判断了
             if ((*it)->IsVideo())
             {
-                out_video_timestamp_ = corrected_timestamp;
+                out_video_original_timestamp_ = (*it)->Timestamp();
             }
             it = out_packet_.erase(it);
         }
@@ -313,7 +312,7 @@ int SsmsPlayClient::PlayResponse(double trans_id)
 void SsmsPlayClient::PostMessage(const SsmsPacketPtr &pkt, bool fmt0)
 {
     loop_->AddTask([this, pkt] () {
-        context_->BuildChunk(pkt, true);
+        context_->BuildChunk(pkt, pkt->Timestamp(), true);
         context_->SendNodes();
     });
 }

@@ -27,7 +27,7 @@ namespace ssms
             int Parse(const SsmsBufferPtr &data) override;
             //将pkt拆分成一个个chunk, 存在sending_nodes_中
             //控制消息第一个chunk必须是fmt0, 但是音视频消息可以根据实际情况选择是否使用fmt0
-            bool BuildChunk(const SsmsPacketPtr &pkt, bool fmt0);
+            bool BuildChunk(const SsmsPacketPtr &pkt, uint32_t timestamp, bool fmt0);
             void SendNodes();
         private:
             int ParseMessage(const SsmsBufferPtr &data);

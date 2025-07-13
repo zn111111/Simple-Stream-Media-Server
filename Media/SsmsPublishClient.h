@@ -31,10 +31,10 @@ namespace ssms
             int ParseDataMessage(const SsmsPacketPtr &data, uint32_t offset);
             void PostMessage(const SsmsPacketPtr &pkt, bool fmt0);
 
-            //上次音频的时间戳
-            uint32_t pre_audio_timestamp{0};
-            //上次视频的时间戳
-            uint32_t pre_video_timestamp{0};
+            //下一个音频包的时间戳
+            uint32_t next_audio_timestamp{0};
+            //下一个视频包的时间戳
+            uint32_t next_video_timestamp{0};
 
             //音频帧间隔, 单位毫秒
             uint16_t a_frame_interval{0};

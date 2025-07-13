@@ -57,13 +57,15 @@ void SsmsStream::Pop(const SsmsPlayClientPtr &player)
         idx = gop_manage_->GetGopByLatency(content_latency);
     }
     //是否过期或延时过高, 是则清理过期gop并跳帧
-    else if (idx <= ExpiredPacketIndex() || gop_manage_->LatestTimeStamp() - player->out_video_timestamp_ >= content_latency * 2)
+    //最新的视频时间戳和客户端输出的最新的时间戳必须都使用原始时间戳,
+    //如果客户端使用校正后的时间戳会不准确甚至客户端校正的时间戳大于最新的视频时间戳导致跳帧
+    else if (idx <= ExpiredPacketIndex() || gop_manage_->LatestTimeStamp() - player->out_video_original_timestamp_ >= content_latency * 2)
     {
         int src_idx = idx;
         gop_manage_->ClearExpiredGop(ExpiredPacketIndex());
         idx = gop_manage_->GetGopByLatency(content_latency);
-        LOG_DEBUG << "packet expired or latency is too high, latest video frame timestamp " << gop_manage_->LatestTimeStamp()
-                    << ", client out latest video frame timestamp " << player->out_video_timestamp_
+        LOG_DEBUG << "packet expired or latency is too high, latest video frame original timestamp " << gop_manage_->LatestTimeStamp()
+                    << ", client out latest video frame original timestamp " << player->out_video_original_timestamp_
                     << ", expired packet index max value " << ExpiredPacketIndex() << ", client request packet index " << src_idx
                     << ", latest packet index " << packet_index_.load() - 1
                     << ", skip frame from index " << src_idx << " to index " << idx;

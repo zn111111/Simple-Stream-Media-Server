@@ -44,8 +44,8 @@ namespace ssms
 
             //已经入out_packet_的包的索引
             int64_t out_packet_index_{-1};
-            //已经发送的最新的视频帧的时间戳
-            uint32_t out_video_timestamp_{0};
+            //已经发送的最新的视频帧的原始时间戳
+            uint32_t out_video_original_timestamp_{0};
             //等待发送的包
             std::list<SsmsPacketPtr> out_packet_;
             //元数据
