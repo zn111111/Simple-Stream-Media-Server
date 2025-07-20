@@ -81,6 +81,7 @@ void TcpConnection::OnRead()
         }
         else
         {
+            connection_alive_ = true;
             int ret = context_->Parse(buffer_);
             if (ret < 0)
             {
@@ -122,6 +123,7 @@ void TcpConnection::OnWrite()
         }
         else
         {
+            connection_alive_ = true;
             while (ret > 0)
             {
                 if (ret < iovecs_[0].iov_len)
@@ -188,16 +190,6 @@ void TcpConnection::SendPktInLoop(char *data, uint32_t len)
     OnSendPkt(data, len);
 }
 
-bool TcpConnection::NewConnection() const
-{
-    return new_connection_;
-}
-
-void TcpConnection::SetToOldConnection()
-{
-    new_connection_ = false;
-}
-
 void TcpConnection::OnSendPkt(char *data, uint32_t len)
 {
     if (!data || 0 == len || closed_)
@@ -222,6 +214,7 @@ void TcpConnection::OnSendPkt(char *data, uint32_t len)
         }
     }
 
+    connection_alive_ = true;
     if (ret < len)
     {
         struct iovec node;
@@ -266,6 +259,7 @@ void TcpConnection::SendNodes(const std::list<BufferNodePtr> &iovecs)
         }
         else
         {
+            connection_alive_ = true;
             int i = 0;
             int size = 0;
             for (; i < iovecs_.size(); i++)

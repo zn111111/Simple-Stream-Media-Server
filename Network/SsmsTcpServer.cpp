@@ -1,7 +1,11 @@
+#include <list>
 #include "SsmsTcpServer.h"
 #include "SsmsTcpConnection.h"
 #include "SsmsEventLoop.h"
 #include "Media/SsmsRtmpMessageContext.h"
+#include "Base/SsmsINIReader.h"
+#include "Base/SsmsLogStream.h"
+#include "SsmsNetAddress.h"
 
 using namespace ssms::nw;
 
@@ -9,6 +13,7 @@ SsmsTcpServer::SsmsTcpServer(SsmsEventLoop *loop, const SsmsNetAddressPtr &local
 : loop_(loop)
 , rtmp_acceptor_(std::make_shared<SsmsAcceptor>(loop, local_addr, SsmsServerProtocolRTMP))
 , live_manage_(live_manage)
+, connection_timeout_(S_SSMSCONFIG->GetInteger("COMMON", "tcp_connection_timeout", 30))
 {
 
 }
@@ -61,6 +66,10 @@ void SsmsTcpServer::Start()
         });
         rtmp_acceptor_->StartListen();
     });
+
+    loop_->RunEvery(30, [this] () {
+        CheckConnectionStatus(loop_);
+    });
 }
 
 void SsmsTcpServer::AfterAccept(SsmsEventLoop *loop, int fd, const SsmsNetAddressPtr &local, const SsmsNetAddressPtr &remote, SsmsServerProtocol protocol)
@@ -97,4 +106,32 @@ void SsmsTcpServer::AfterClose(const TcpConnectionPtr &conn)
     {
         close_callback_(conn);
     }
+}
+
+void SsmsTcpServer::CheckConnectionStatus(SsmsEventLoop *loop)
+{
+    uint32_t active_connection_nums = 0;
+    std::list<TcpConnectionPtr> conn_list;
+    for (auto it = connections_.begin(); it != connections_.end(); ++it)
+    {
+        if ((*it)->Alive())
+        {
+            (*it)->Reset();
+            active_connection_nums++;
+        }
+        else
+        {
+            conn_list.push_back(*it);
+        }
+    }
+
+    for (auto it = conn_list.begin(); it != conn_list.end();)
+    {
+        connections_.erase(*it);
+        LOG_DEBUG << "client ip " << (*it)->client_addr_->GetStringIp() << " fd " << (*it)->Fd() << " connection timeout, close the connection";
+        (*it)->OnClose();
+        it = conn_list.erase(it);
+    }
+
+    LOG_INFO << "thread id " << std::this_thread::get_id() << ", " << active_connection_nums << "connections active";
 }

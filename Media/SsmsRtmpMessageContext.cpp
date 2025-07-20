@@ -307,11 +307,6 @@ int SsmsRtmpMessageContext::ParseMessage(const SsmsBufferPtr &data)
     header->stream_id = ((RtmpMessageAudio == message_type_id || RtmpMessageAMF3MetaData == message_type_id || RtmpMessageAMF0MetaData == message_type_id)
                         ? 1 : stream_id);
 
-    //uint8_t其实就是unsigned char, 直接输出(无论是ostringstream还是cout)会输出ascii码, 没有对应的ascii就会显示为空或者乱码
-    LOG_TRACE << "csid = " << (uint32_t )csid << ", fmt = " << (uint32_t )fmt << ", timestamp_delta = " << header->timestamp_delta << ", timestamp = "
-                << header->timestamp << ", payload_len = " << payload_len << ", message_type_id = " << (uint32_t )message_type_id
-                << ", stream_id = " << stream_id;
-
     SsmsPacketPtr packet;
     if (packets_.find(csid) == packets_.end())
     {

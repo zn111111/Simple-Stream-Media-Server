@@ -18,10 +18,14 @@ namespace ssms
             virtual void EnableReadEvent(bool enable) override;
             //开启或关闭写事件
             virtual void EnableWriteEvent(bool enable) override;
+            bool Alive() const;
+            void Reset();
         protected:
             SsmsEventLoop *loop_{nullptr};
             SsmsNetAddressPtr client_addr_;
             SsmsNetAddressPtr server_addr_;
+            //连接是否活跃, 有数据交换表示活跃
+            bool connection_alive_{false};
         };
     }
 }

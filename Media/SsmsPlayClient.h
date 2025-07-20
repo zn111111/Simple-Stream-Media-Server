@@ -30,10 +30,6 @@ namespace ssms
             ~SsmsPlayClient() = default;
             
             int Process(const SsmsPacketPtr &data, const std::string &command, double trans_id = 999999.999999) override;
-            //是否是新的拉流客户端
-            bool NewComming();
-            //设置为旧的拉流客户端
-            void SetToOld();
             void Play();
             void Active();
             void DeActive();

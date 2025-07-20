@@ -9,6 +9,7 @@
 #include <list>
 #include "Base/NonCopyable.h"
 #include "SsmsNetworkDefine.h"
+#include "Base/SsmsTimingWheel.h"
 
 using namespace ssms::base;
 
@@ -34,6 +35,9 @@ namespace ssms
             bool IsInEventLoopThread();
             void EnableReadEvent(const SsmsEventPtr &event, bool enable);                      //开启或关闭读事件
             void EnableWriteEvent(const SsmsEventPtr &event, bool enable);                     //开启或关闭写事件
+            //添加定时任务
+            void RunAfter(uint32_t seconds, TimingCallback func);
+            void RunEvery(uint32_t seconds, TimingCallback func);
         private:
             //当前线程是事件循环所在的线程
             void AssertInEventLoopThread();
@@ -48,6 +52,8 @@ namespace ssms
             //任务队列
             std::queue<TaskCallback> tasks_;
             std::list<TaskCallback> tasks_copy_;
+            //定时器
+            SsmsTimingWheelPtr timer_;
         };
     }
 }

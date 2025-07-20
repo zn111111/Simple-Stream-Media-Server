@@ -73,16 +73,6 @@ int SsmsPlayClient::Process(const SsmsPacketPtr &data, const std::string &comman
     return ret;
 }
 
-bool SsmsPlayClient::NewComming()
-{
-    return conn_->NewConnection();
-}
-
-void SsmsPlayClient::SetToOld()
-{
-    conn_->SetToOldConnection();
-}
-
 void SsmsPlayClient::Play()
 {
     SsmsStreamPtr stream = sess_->Stream();

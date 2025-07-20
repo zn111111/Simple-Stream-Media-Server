@@ -26,3 +26,13 @@ void SsmsConnection::EnableWriteEvent(bool enable)
 {
     loop_->EnableWriteEvent(shared_from_this(), enable);
 }
+
+bool SsmsConnection::Alive() const
+{
+    return connection_alive_;
+}
+
+void SsmsConnection::Reset()
+{
+    connection_alive_ = false;
+}

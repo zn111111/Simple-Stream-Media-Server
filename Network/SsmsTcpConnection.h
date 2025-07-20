@@ -36,6 +36,7 @@ namespace ssms
         {
             friend class ssms::media::SsmsRtmpHandshakeContext;
             friend class ssms::live::SsmsSession;
+            friend class SsmsTcpServer;
         public:
             TcpConnection(SsmsEventLoop *loop, const SsmsNetAddressPtr &client_addr, SsmsNetAddressPtr server_addr, int fd);
             ~TcpConnection();
@@ -57,8 +58,6 @@ namespace ssms
             void SendPkt(char *data, uint32_t len);
             //发送单个数据包, 事件循环内调用
             void SendPktInLoop(char *data, uint32_t len);
-            bool NewConnection() const;
-            void SetToOldConnection();
             void SendNodes(const std::list<BufferNodePtr> &iovecs);
         private:
             //发送单个数据包, 可能会被其他线程调用, 不监听，先尝试发送, 发送失败或没发完就入队
@@ -72,8 +71,6 @@ namespace ssms
             //关闭连接时执行的回调
             BusinessCloseCallback close_callback_;
             SsmsContextPtr context_;
-            //是否是新连接
-            bool new_connection_{true};
         };
     }
 }

@@ -32,6 +32,7 @@ namespace ssms
         private:
             void AfterAccept(SsmsEventLoop *loop, int fd, const SsmsNetAddressPtr &local, const SsmsNetAddressPtr &remote, SsmsServerProtocol protocol);    
             void AfterClose(const TcpConnectionPtr &conn);
+            void CheckConnectionStatus(SsmsEventLoop *loop);
 
             SsmsEventLoop *loop_ {nullptr};
             SsmsAcceptorPtr rtmp_acceptor_;
@@ -40,6 +41,8 @@ namespace ssms
             BusinessReceiveCallback recv_callback_;
             BusinessWriteCompleteCallback write_callback_;
             BusinessCloseCallback close_callback_;
+            //连接超时时间
+            uint32_t connection_timeout_{30};
         };
     }
 }

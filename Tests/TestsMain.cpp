@@ -7,6 +7,7 @@
 #include "SsmsThreadLoopReadWriteTest.h"
 #include "SsmsTcpServerTest.h"
 #include "SsmsRtmpHandshakeTest.h"
+#include "SsmsTimingWheelTest.h"
 
 int main()
 {
@@ -23,6 +24,7 @@ int main()
     // TestRead();
     // TestTcpServer();
     RtmpHandshakeTest();
+    // TestTimingWheel();
 
     return 0;
 }

@@ -11,7 +11,9 @@ using namespace ssms::nw;
 static thread_local SsmsEventLoop *event_loop = nullptr;
 
 SsmsEventLoop::SsmsEventLoop()
-: epoll_fd_(::epoll_create(1024)), epoll_events_(1024)
+: epoll_fd_(::epoll_create(1024))
+, epoll_events_(1024)
+, timer_(std::make_unique<SsmsTimingWheel>())
 {
     if (!event_loop)
     {
@@ -74,6 +76,8 @@ void SsmsEventLoop::OnWork()
 
         //处理任务队列
         ProcessTask();
+        //处理定时任务
+        timer_->OnTiming();
     }
 }
 
@@ -191,6 +195,16 @@ void SsmsEventLoop::EnableWriteEvent(const SsmsEventPtr &event, bool enable)
         epoll_event.events = event->event_;
         ::epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, event->fd_, &epoll_event);
     }
+}
+
+void SsmsEventLoop::RunAfter(uint32_t seconds, TimingCallback func)
+{
+    timer_->RunAfter(seconds, func);
+}
+
+void SsmsEventLoop::RunEvery(uint32_t seconds, TimingCallback func)
+{
+    timer_->RunEvery(seconds, func);
 }
 
 void SsmsEventLoop::ProcessTask()
