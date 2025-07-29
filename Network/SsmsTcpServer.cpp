@@ -133,5 +133,5 @@ void SsmsTcpServer::CheckConnectionStatus(SsmsEventLoop *loop)
         it = conn_list.erase(it);
     }
 
-    LOG_INFO << "thread id " << std::this_thread::get_id() << ", " << active_connection_nums << "connections active";
+    LOG_INFO << "thread id " << std::this_thread::get_id() << ", " << active_connection_nums << " connections active";
 }

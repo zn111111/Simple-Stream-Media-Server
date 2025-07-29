@@ -1,11 +1,17 @@
 #include "SsmsEventLoopThread.h"
 #include "SsmsEventLoop.h"
 #include "SsmsTcpServer.h"
+#include "Base/SsmsLogStream.h"
 
 using namespace ssms::nw;
 
 SsmsEventLoopThread::SsmsEventLoopThread()
-: thread_([this] () {OnStart();})
+{
+
+}
+
+SsmsEventLoopThread::SsmsEventLoopThread(int core_id)
+: thread_([this, core_id] () {OnStart(core_id);})
 {
 
 }
@@ -59,8 +65,18 @@ void SsmsEventLoopThread::Stop()
     loop_->Stop();
 }
 
-void SsmsEventLoopThread::OnStart()
+void SsmsEventLoopThread::OnStart(int core_id)
 {
+    //设置cpu亲和性
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset);
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset))
+    {
+        LOG_ERROR << "thread "<< pthread_self() << " set cpu affinity error";
+        exit(1);
+    }
+
     std::unique_lock<std::mutex> lk(lock_);
     condition_.wait(lk, [this] () {return is_looping_;});
     SsmsEventLoop loop;

@@ -18,13 +18,14 @@ namespace ssms
         {
         public:
             SsmsEventLoopThread();
+            SsmsEventLoopThread(int core_id);
             ~SsmsEventLoopThread();
 
             SsmsEventLoop *Loop() const;
             void Run(const SsmsNetAddressPtr &local_addr, const SsmsLiveManagmentPtr &live_manage);
             void Stop();
         private:
-            void OnStart();
+            void OnStart(int core_id);
 
             SsmsEventLoop *loop_{nullptr};
             std::thread thread_;

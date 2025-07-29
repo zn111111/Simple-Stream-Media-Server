@@ -59,3 +59,22 @@ std::string SsmsUtils::GetParentDirWithFilename(const std::string &filepath)
 
     return filepath.substr(pos + 1, end_pos - pos);
 }
+
+std::vector<int> SsmsUtils::Split(const std::string &src, const std::string &flag)
+{
+    int begin = 0;
+    size_t end = std::string::npos;
+    std::vector<int> v;
+    while ((end = src.find(flag, begin)) != std::string::npos)
+    {
+        v.emplace_back(atoi(src.substr(begin, end - begin).c_str()));
+        begin = end + 1;
+    }
+
+    if (begin < src.size())
+    {
+        v.emplace_back(atoi(src.substr(begin).c_str()));
+    }
+
+    return v;
+}

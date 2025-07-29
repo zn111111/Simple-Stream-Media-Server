@@ -47,17 +47,19 @@ void SsmsEventLoop::OnWork()
                 {
                     LOG_DEBUG << "error event occurred";
                     events_[ev.data.fd]->OnError();
+                    continue;
                 }
                 else if ((ev.events & EPOLLHUP) && !(ev.events & EPOLLIN))
                 {
                     LOG_DEBUG << "peer closed the connection";
                     events_[ev.data.fd]->OnClose();
+                    continue;
                 }
-                else if (ev.events & (EPOLLIN | EPOLLPRI))
+                if (ev.events & (EPOLLIN | EPOLLPRI))
                 {
                     events_[ev.data.fd]->OnRead();
                 }
-                else if (ev.events & EPOLLOUT)
+                if (ev.events & EPOLLOUT)
                 {
                     events_[ev.data.fd]->OnWrite();
                 }

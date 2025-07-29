@@ -2,6 +2,7 @@
 
 #include <string>
 #include <stdint.h>
+#include <vector>
 #include "NonCopyable.h"
 
 namespace ssms
@@ -22,6 +23,8 @@ namespace ssms
             static bool Compare(double d1, double d2, double eps = 1e-9);
             //返回filepath的上级目录加上当前文件, dir/file
             static std::string GetParentDirWithFilename(const std::string &filepath);
+            //将src以flag为分隔符拆分
+            static std::vector<int> Split(const std::string &src, const std::string &flag);
         };
     }
 }
