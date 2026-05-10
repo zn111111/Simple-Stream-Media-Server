@@ -69,7 +69,7 @@ void TcpConnection::OnRead()
             if (EINTR != err && EAGAIN != err && EWOULDBLOCK != err)
             {
                 LOG_ERROR << "read error, " << strerror(errno);
-                OnError();
+                OnClose();
             }
             break;
         }
@@ -116,7 +116,7 @@ void TcpConnection::OnWrite()
             if (EINTR != errno && EAGAIN != errno && EWOULDBLOCK != errno)
             {
                 LOG_ERROR << "writev error, " << strerror(errno);
-                OnError();
+                OnClose();
                 return;
             }
             break;
@@ -190,6 +190,43 @@ void TcpConnection::SendPktInLoop(char *data, uint32_t len)
     OnSendPkt(data, len);
 }
 
+void TcpConnection::SendNode(const struct iovec &iovec)
+{
+    if (closed_)
+    {
+        LOG_WARN << "client ip " << client_addr_->GetStringIp() << ", port " << client_addr_->GetPort() << ", fd " << fd_ << ", closed";
+        return;
+    }
+
+    int ret = ::writev(fd_, &iovec, 1);
+    if (ret < 0)
+    {
+        if (EINTR != errno && EAGAIN != errno && EWOULDBLOCK != errno)
+        {
+            LOG_ERROR << "writev error, " << strerror(errno);
+            OnClose();
+            return;
+        }
+    }
+    
+    connection_alive_ = true;
+    int size = iovec.iov_len;
+    if (size > ret)
+    {
+        struct iovec ovec;
+        int to_be_send_bytes = size - ret;
+        ovec.iov_base = (char *)(iovec.iov_base) + ret;
+        ovec.iov_len = to_be_send_bytes;
+        iovecs_.emplace_back(ovec);
+        //开启写
+        EnableWriteEvent(true);
+    }
+    else
+    {
+        write_callback_(context_);
+    }
+}
+
 void TcpConnection::OnSendPkt(char *data, uint32_t len)
 {
     if (!data || 0 == len || closed_)
@@ -206,7 +243,7 @@ void TcpConnection::OnSendPkt(char *data, uint32_t len)
             if (EINTR != errno && EAGAIN != errno && EWOULDBLOCK != errno)
             {
                 LOG_ERROR << "send packet errror, " << strerror(errno);
-                OnError();
+                OnClose();
                 return;
             }
 
@@ -226,7 +263,7 @@ void TcpConnection::OnSendPkt(char *data, uint32_t len)
     }
 }
 
-void TcpConnection::SendNodes(const std::list<BufferNodePtr> &iovecs)
+void TcpConnection::SendNodes(const std::list<struct iovec> &iovecs)
 {
     if (closed_)
     {
@@ -237,8 +274,8 @@ void TcpConnection::SendNodes(const std::list<BufferNodePtr> &iovecs)
     struct iovec iovec;
     for (auto it = iovecs.begin(); it != iovecs.end(); ++it)
     {
-        iovec.iov_base = (*it)->iov_base;
-        iovec.iov_len = (*it)->iov_len;
+        iovec.iov_base = (*it).iov_base;
+        iovec.iov_len = (*it).iov_len;
         iovecs_.emplace_back(iovec);
     }
 
@@ -252,7 +289,7 @@ void TcpConnection::SendNodes(const std::list<BufferNodePtr> &iovecs)
             if (EINTR != errno && EAGAIN != errno && EWOULDBLOCK != errno)
             {
                 LOG_ERROR << "writev error, " << strerror(errno);
-                OnError();
+                OnClose();
                 return;
             }
             break;

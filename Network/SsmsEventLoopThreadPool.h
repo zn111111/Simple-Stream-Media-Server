@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <unordered_map>
 #include "Base/NonCopyable.h"
 #include "SsmsNetworkDefine.h"
 
@@ -16,7 +17,10 @@ namespace ssms
             SsmsEventLoopThreadPool();
             ~SsmsEventLoopThreadPool();
 
-            void Start(const ssms::nw::SsmsNetAddressPtr &local_addr, const ssms::live::SsmsLiveManagmentPtr &live_manage);
+            void Start(const std::unordered_map<SsmsServerProtocol, SsmsNetAddressPtr> &local_addr_map,
+                        const SsmsNetAddressPtr &udp_addr,
+                        const SsmsLiveManagmentPtr &live_manage,
+                        const SsmsWebrtcServerPtr &rtc_server);
             SsmsEventLoopThreadPtr GetNextThread();
             uint32_t GetThreadNums() const;
         private:

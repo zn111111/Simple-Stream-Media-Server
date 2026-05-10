@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_set>
+#include <unordered_map>
 #include "Base/NonCopyable.h"
 #include "SsmsNetAddress.h"
 #include "SsmsAcceptor.h"
@@ -16,7 +17,7 @@ namespace ssms
         class SsmsTcpServer : public NonCopyable
         {
         public:
-            SsmsTcpServer(SsmsEventLoop *loop, const SsmsNetAddressPtr &local_addr, const SsmsLiveManagmentPtr &live_manage);
+            SsmsTcpServer(SsmsEventLoop *loop, const std::unordered_map<SsmsServerProtocol, SsmsNetAddressPtr> &local_addr_map, const SsmsLiveManagmentPtr &live_manage);
             virtual ~SsmsTcpServer();
             
             //上层业务设置接收完数据后执行的回调
@@ -28,14 +29,20 @@ namespace ssms
             //上层业务设置连接关闭后执行的回调
             void SetCloseCallback(const BusinessCloseCallback &callback);
             void SetCloseCallback(BusinessCloseCallback &&callback);
-            void Start();
+            void Start(SsmsWebrtcServerPtr rtc_server);
         private:
-            void AfterAccept(SsmsEventLoop *loop, int fd, const SsmsNetAddressPtr &local, const SsmsNetAddressPtr &remote, SsmsServerProtocol protocol);    
+            void AfterAccept(SsmsEventLoop *loop,
+                            int fd,
+                            const SsmsNetAddressPtr &local,
+                            const SsmsNetAddressPtr &remote,
+                            SsmsServerProtocol protocol,
+                            SsmsWebrtcServerPtr rtc_server);
             void AfterClose(const TcpConnectionPtr &conn);
             void CheckConnectionStatus(SsmsEventLoop *loop);
 
             SsmsEventLoop *loop_ {nullptr};
             SsmsAcceptorPtr rtmp_acceptor_;
+            SsmsAcceptorPtr http_acceptor_;
             SsmsLiveManagmentPtr live_manage_;
             std::unordered_set<TcpConnectionPtr> connections_;
             BusinessReceiveCallback recv_callback_;

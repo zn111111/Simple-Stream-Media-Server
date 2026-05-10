@@ -89,7 +89,7 @@ void SsmsAcceptor::OnAccept()
             {
                 char ip[40] = {'\0'};
                 ::inet_ntop(AF_INET, ((struct sockaddr_in6 *)&addr)->sin6_addr.s6_addr, ip, sizeof(ip) - 1);
-                netaddr->SetIp(ip, ::ntohs(((struct sockaddr_in6 *)&addr)->sin6_port), true);
+                netaddr->SetIp(ip, ::ntohs(((struct sockaddr_in6 *)&addr)->sin6_port), false);
             }
             LOG_DEBUG << "accept connection, fd = " << fd << ", client ip = " << netaddr->GetStringIp() << ", client port = " << netaddr->GetPort();
             if (cb_)

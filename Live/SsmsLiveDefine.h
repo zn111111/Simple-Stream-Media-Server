@@ -15,7 +15,8 @@ namespace ssms
         enum SsmsServerProtocol
         {
             SsmsServerProtocolDefault,
-            SsmsServerProtocolRTMP
+            SsmsServerProtocolRTMP,
+            SsmsServerProtocolHTTP
         };
     }
 }

@@ -17,11 +17,14 @@ namespace ssms
             void SetIp(const std::string &ip, int port, bool ipv4);
             void GetSockAddr(struct sockaddr *addr);
             std::string GetStringIp() const;
-            std::string GetPort() const ;
+            uint16_t GetPort() const ;
+            static void GetIpPort(const struct sockaddr *addr, bool ipv4, std::string &ip, int &port);
+            bool Ipv4() const;
+            std::string GetFourTuple() const;
         private:
             bool ipv4_{false};
             std::string ip_;
-            std::string port_;
+            uint16_t port_;
         };
     }
 }

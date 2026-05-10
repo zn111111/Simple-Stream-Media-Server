@@ -47,6 +47,15 @@ namespace ssms
         class SsmsTimestampCorrector;
         using SsmsTimestampCorrectorPtr = std::shared_ptr<SsmsTimestampCorrector>;
 
+        class SsmsHttpMessageContext;
+        using SsmsHttpMessageContextPtr = std::shared_ptr<SsmsHttpMessageContext>;
+
+        class SsmsWebrtcPlayClient;
+        using SsmsWebrtcPlayClientPtr = std::shared_ptr<SsmsWebrtcPlayClient>;
+
+        class SsmsWebrtcServer;
+        using SsmsWebrtcServerPtr = std::shared_ptr<SsmsWebrtcServer>;
+
         //音频最大间隔, 单位毫秒, 超过此值需要纠正时间戳
         const int AUDIO_MAX_DELTA = 67;
         //视频最大间隔, 单位毫秒, 超过此值需要纠正时间戳
@@ -126,6 +135,13 @@ namespace ssms
         enum UserControlMsgType
         {
             UserControlMsgSetBufferLength = 3
+        };
+
+        enum UdpPacketType
+        {
+            DTLS_PACKET,
+            RTP_PACKET,
+            RTCP_PACKET
         };
 
         struct RtmpMessageHeader

@@ -3,6 +3,7 @@
 #include "SsmsClient.h"
 #include "Live/SsmsLiveDefine.h"
 #include "Network/SsmsNetworkDefine.h"
+#include "SsmsAACDecoder.h"
 
 using namespace ssms::live;
 using namespace ssms::nw;
@@ -40,6 +41,8 @@ namespace ssms
             uint16_t a_frame_interval{0};
             //视频帧间隔, 单位毫秒
             uint16_t v_frame_interval{0};
+
+            SsmsAACDecoder decoder_;
         };
     }
 }

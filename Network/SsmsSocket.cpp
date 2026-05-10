@@ -3,6 +3,7 @@
 #include <string.h>
 #include "SsmsSocket.h"
 #include "Base/SsmsLogStream.h"
+#include "SsmsNetAddress.h"
 
 using namespace ssms::nw;
 
@@ -24,7 +25,10 @@ void SsmsSocket::Bind(int fd, const struct sockaddr &addr)
 {
     if (::bind(fd, &addr, sizeof(addr)) < 0)
     {
-        LOG_ERROR << "::bind error, " << strerror(errno);
+        std::string ip;
+        int port;
+        SsmsNetAddress::GetIpPort(&addr, true, ip, port);
+        LOG_ERROR << "::bind "<< "ip " << ip << " port " << port << " error, " << strerror(errno);
         exit(-1);
     }
 }

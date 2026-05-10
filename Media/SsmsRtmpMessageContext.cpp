@@ -800,10 +800,10 @@ bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, uint32_t times
             sending_curr_ += 4;
         }
     }
-    BufferNodePtr node = std::make_shared<struct iovec>();
-    node->iov_base = p + offset_header_start;
-    node->iov_len = sending_curr_ - offset_header_start;
-    sending_nodes_.emplace_back(std::move(node));
+    struct iovec node;
+    node.iov_base = p + offset_header_start;
+    node.iov_len = sending_curr_ - offset_header_start;
+    sending_nodes_.emplace_back(node);
     prev->message_type_id = message_type_id;
     prev->payload_len = payload_len;
     prev->stream_id = stream_id;
@@ -817,10 +817,9 @@ bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, uint32_t times
     {
 
         uint32_t min_len = (pkt->payload_size_ - offset_payload_end < s_chunk_size_ ? pkt->payload_size_ - offset_payload_end : s_chunk_size_);
-        node = std::make_shared<struct iovec>();
-        node->iov_base = pkt->data + offset_payload_end;
-        node->iov_len = min_len;
-        sending_nodes_.emplace_back(std::move(node));
+        node.iov_base = pkt->data + offset_payload_end;
+        node.iov_len = min_len;
+        sending_nodes_.emplace_back(node);
         offset_payload_end += min_len;
         if (offset_payload_end == pkt->payload_size_)
         {
@@ -851,10 +850,9 @@ bool SsmsRtmpMessageContext::BuildChunk(const SsmsPacketPtr &pkt, uint32_t times
             SsmsUtils::Write4BytesBe(p + sending_curr_, timestamp_delta);
             sending_curr_ += 4;
         }
-        node = std::make_shared<struct iovec>();
-        node->iov_base = p + offset_header_start;
-        node->iov_len = sending_curr_ - offset_header_start;
-        sending_nodes_.emplace_back(std::move(node));
+        node.iov_base = p + offset_header_start;
+        node.iov_len = sending_curr_ - offset_header_start;
+        sending_nodes_.emplace_back(node);
         offset_header_start = sending_curr_;
     }
 

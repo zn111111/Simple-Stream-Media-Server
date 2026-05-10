@@ -15,9 +15,6 @@ namespace ssms
     {
         class SsmsNetAddress;
         using SsmsNetAddressPtr = std::shared_ptr<SsmsNetAddress>;
-
-        class SsmsEventLoop;
-        using AcceptCallback = std::function<void (SsmsEventLoop *loop, int fd, const SsmsNetAddressPtr &client, const SsmsNetAddressPtr &server, SsmsServerProtocol protocol)>;
         
         class SsmsAcceptor;
         using SsmsAcceptorPtr = std::shared_ptr<SsmsAcceptor>;
@@ -25,13 +22,34 @@ namespace ssms
         class SsmsEvent;
         using SsmsEventPtr = std::shared_ptr<SsmsEvent>;
 
-        using TaskCallback = std::function<void ()>;
-
         class SsmsEventLoopThread;
         using SsmsEventLoopThreadPtr = std::shared_ptr<SsmsEventLoopThread>;
 
         class TcpConnection;
         using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
+
+        class SsmsTcpServer;
+        using SsmsTcpServerPtr = std::shared_ptr<SsmsTcpServer>;
+
+        class SsmsEventLoopThreadPool;
+        using SsmsEventLoopThreadPoolPtr = std::unique_ptr<SsmsEventLoopThreadPool>;
+
+        class SsmsUdpServer;
+        using SsmsUdpServerPtr = std::shared_ptr<SsmsUdpServer>;
+
+        class SsmsUdpClient;
+        using SsmsUdpClientPtr = std::shared_ptr<SsmsUdpClient>;
+
+        struct SsmsUdpPkt;
+        using SsmsUdpPktPtr = std::shared_ptr<struct SsmsUdpPkt>;
+
+        class SsmsUdpSocket;
+        using SsmsUdpSocketPtr = std::shared_ptr<SsmsUdpSocket>;
+
+        class SsmsEventLoop;
+        using AcceptCallback = std::function<void (SsmsEventLoop *loop, int fd, const SsmsNetAddressPtr &client, const SsmsNetAddressPtr &server, SsmsServerProtocol protocol)>;
+
+        using TaskCallback = std::function<void ()>;
 
         using BusinessCloseCallback = std::function<void (const TcpConnectionPtr &)>;
 
@@ -39,12 +57,10 @@ namespace ssms
 
         using BusinessWriteCompleteCallback = std::function<void (const SsmsContextPtr &)>;
 
-        using BufferNodePtr = std::shared_ptr<struct iovec>;
+        using UdpWriteCompleteCallback = std::function<void ()>;
 
-        class SsmsTcpServer;
-        using SsmsTcpServerPtr = std::shared_ptr<SsmsTcpServer>;
+        using UdpCloseCallback = std::function<void ()>;
 
-        class SsmsEventLoopThreadPool;
-        using SsmsEventLoopThreadPoolPtr = std::unique_ptr<SsmsEventLoopThreadPool>;
+        using UdpMessageCallback = std::function<int (const SsmsUdpSocketPtr &, const SsmsNetAddressPtr &, const SsmsUdpPktPtr &)>;
     }
 }

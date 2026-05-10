@@ -8,6 +8,7 @@
 //
 #include <errno.h>
 #include <sys/uio.h>
+#include <sys/socket.h>
 #include "SsmsBuffer.h"
 
 using namespace ssms::base;

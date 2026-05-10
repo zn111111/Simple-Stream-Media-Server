@@ -23,7 +23,7 @@ namespace ssms
             virtual int Parse(const SsmsBufferPtr &data) = 0;
             virtual void ClearSendCompleteData();
             template <typename T>
-            std::shared_ptr<T> GetContext() const
+            std::shared_ptr<T> GetContext()
             {
                 return std::dynamic_pointer_cast<T>(shared_from_this());
             }

@@ -69,8 +69,8 @@ namespace ssms
             std::list<SsmsPacketPtr> waiting_to_send_;
             //正在发送的源数据队列, 发送完由回调删除
             std::list<SsmsPacketPtr> sending_pkts_;
-            //仅用于调用BuildChunk时临时存储切分好的一个个chunk的BufferNodePtr
-            std::list<BufferNodePtr> sending_nodes_;
+            //仅用于调用BuildChunk时临时存储切分好的一个个chunk的struct iovec
+            std::list<struct iovec> sending_nodes_;
             //csid : RtmpMessageHeader, 上一个发送的包的时间戳差值
             std::unordered_map<int, uint32_t> prev_timestamp_deltas_;
         };

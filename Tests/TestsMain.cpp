@@ -8,6 +8,8 @@
 #include "SsmsTcpServerTest.h"
 #include "SsmsRtmpHandshakeTest.h"
 #include "SsmsTimingWheelTest.h"
+#include "SsmsUdpServerTest.h"
+#include "Base/SsmsUtils.h"
 
 int main()
 {
@@ -17,14 +19,18 @@ int main()
         std::cout << "load config error" << std::endl;
         return -1;
     }
+
+    SsmsUtils::InitCrc32();
+
     // TestConfig();
     // TestLog();
     // EventLoopThreadTest();
     // TestAcceptor();
     // TestRead();
     // TestTcpServer();
-    RtmpHandshakeTest();
+    // RtmpHandshakeTest();
     // TestTimingWheel();
+    TestUdpServer();
 
     return 0;
 }

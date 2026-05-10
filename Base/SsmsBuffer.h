@@ -11,13 +11,14 @@
 #ifndef MUDUO_NET_BUFFER_H
 #define MUDUO_NET_BUFFER_H
 
-#include "Base/NonCopyable.h"
 #include <algorithm>
 #include <vector>
 #include <string>
 #include <memory>
 #include <assert.h>
 #include <string.h>
+#include <sys/socket.h>
+#include "Base/NonCopyable.h"
 
 using std::string;
 

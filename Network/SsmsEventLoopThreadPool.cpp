@@ -18,7 +18,10 @@ SsmsEventLoopThreadPool::~SsmsEventLoopThreadPool()
 
 }
 
-void SsmsEventLoopThreadPool::Start(const ssms::nw::SsmsNetAddressPtr &local_addr, const ssms::live::SsmsLiveManagmentPtr &live_manage)
+void SsmsEventLoopThreadPool::Start(const std::unordered_map<SsmsServerProtocol, SsmsNetAddressPtr> &local_addr_map,
+                                    const SsmsNetAddressPtr &udp_addr,
+                                    const SsmsLiveManagmentPtr &live_manage,
+                                    const SsmsWebrtcServerPtr &rtc_server)
 {
     std::string cpu = S_SSMSCONFIG->GetString("COMMON", "running_cpu", "");
     if (cpu.empty())
@@ -26,7 +29,7 @@ void SsmsEventLoopThreadPool::Start(const ssms::nw::SsmsNetAddressPtr &local_add
         LOG_ERROR << "COMMON running_cpu is empty";
         exit(1);
     }
-    std::vector<int> v_cpu = SsmsUtils::Split(cpu, ",");
+    std::vector<std::string> v_cpu = SsmsUtils::Split(cpu, ",");
     if (v_cpu.empty() || v_cpu.size() != thread_nums_)
     {
         LOG_ERROR << "no cpu is set, or cpu nums is not equal to thread nums";
@@ -35,8 +38,8 @@ void SsmsEventLoopThreadPool::Start(const ssms::nw::SsmsNetAddressPtr &local_add
 
     for (int i = 0; i < thread_nums_; i++)
     {
-        SsmsEventLoopThreadPtr thread = std::make_shared<SsmsEventLoopThread>(v_cpu[i]);
-        thread->Run(local_addr, live_manage);
+        SsmsEventLoopThreadPtr thread = std::make_shared<SsmsEventLoopThread>(atoi(v_cpu[i].c_str()));
+        thread->Run(local_addr_map, udp_addr, live_manage, rtc_server);
         threads_[i] = thread;
     }
 }

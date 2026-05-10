@@ -6,16 +6,24 @@
 #include "Base/SsmsINIReader.h"
 #include "Base/SsmsLogStream.h"
 #include "SsmsNetAddress.h"
+#include "Media/SsmsHttpMessageContext.h"
 
 using namespace ssms::nw;
 
-SsmsTcpServer::SsmsTcpServer(SsmsEventLoop *loop, const SsmsNetAddressPtr &local_addr, const SsmsLiveManagmentPtr &live_manage)
+SsmsTcpServer::SsmsTcpServer(SsmsEventLoop *loop, const std::unordered_map<SsmsServerProtocol, SsmsNetAddressPtr> &local_addr_map, const SsmsLiveManagmentPtr &live_manage)
 : loop_(loop)
-, rtmp_acceptor_(std::make_shared<SsmsAcceptor>(loop, local_addr, SsmsServerProtocolRTMP))
 , live_manage_(live_manage)
 , connection_timeout_(S_SSMSCONFIG->GetInteger("COMMON", "tcp_connection_timeout", 30))
 {
-
+    std::unordered_map<SsmsServerProtocol, SsmsNetAddressPtr>::const_iterator iter_rtmp;
+    std::unordered_map<SsmsServerProtocol, SsmsNetAddressPtr>::const_iterator iter_http;
+    if ((iter_rtmp = local_addr_map.find(SsmsServerProtocolRTMP)) == local_addr_map.end()
+        || (iter_http = local_addr_map.find(SsmsServerProtocolHTTP)) == local_addr_map.end())
+    {
+        return;
+    }
+    rtmp_acceptor_ = std::make_shared<SsmsAcceptor>(loop, iter_rtmp->second, SsmsServerProtocolRTMP);
+    http_acceptor_ = std::make_shared<SsmsAcceptor>(loop, iter_http->second, SsmsServerProtocolHTTP);
 }
 
 SsmsTcpServer::~SsmsTcpServer()
@@ -53,18 +61,28 @@ void SsmsTcpServer::SetCloseCallback(BusinessCloseCallback &&callback)
     close_callback_ = std::move(callback);
 }
 
-void SsmsTcpServer::Start()
+void SsmsTcpServer::Start(SsmsWebrtcServerPtr rtc_server)
 {
-    loop_->AddTask([this] () {
-        rtmp_acceptor_->SetAcceptCallback([this] (SsmsEventLoop *loop,
+    loop_->AddTask([this, rtc_server] () {
+        rtmp_acceptor_->SetAcceptCallback([this, rtc_server] (SsmsEventLoop *loop,
                                                 int fd,
                                                 const SsmsNetAddressPtr &local,
                                                 const SsmsNetAddressPtr &remote,
                                                 SsmsServerProtocol protocol)
         {
-            AfterAccept(loop, fd, local, remote, protocol);
+            AfterAccept(loop, fd, local, remote, protocol, rtc_server);
         });
         rtmp_acceptor_->StartListen();
+
+        http_acceptor_->SetAcceptCallback([this, rtc_server] (ssms::nw::SsmsEventLoop *loop,
+                                            int fd,
+                                            const ssms::nw::SsmsNetAddressPtr &local,
+                                            const ssms::nw::SsmsNetAddressPtr &remote,
+                                            ssms::live::SsmsServerProtocol protocol)
+        {
+            AfterAccept(loop, fd, local, remote, protocol, rtc_server);
+        });
+        http_acceptor_->StartListen();
     });
 
     loop_->RunEvery(30, [this] () {
@@ -72,7 +90,12 @@ void SsmsTcpServer::Start()
     });
 }
 
-void SsmsTcpServer::AfterAccept(SsmsEventLoop *loop, int fd, const SsmsNetAddressPtr &local, const SsmsNetAddressPtr &remote, SsmsServerProtocol protocol)
+void SsmsTcpServer::AfterAccept(SsmsEventLoop *loop,
+                                int fd,
+                                const SsmsNetAddressPtr &local,
+                                const SsmsNetAddressPtr &remote,
+                                SsmsServerProtocol protocol,
+                                SsmsWebrtcServerPtr rtc_server)
 {
     TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop, local, remote, fd);
     SsmsContextPtr context;
@@ -80,6 +103,11 @@ void SsmsTcpServer::AfterAccept(SsmsEventLoop *loop, int fd, const SsmsNetAddres
     {
         case SsmsServerProtocolRTMP:
             context = std::make_shared<SsmsRtmpMessageContext>(loop, conn, live_manage_);
+            break;
+        case SsmsServerProtocolHTTP:
+        {
+            context = std::make_shared<SsmsHttpMessageContext>(loop, conn, live_manage_, rtc_server);
+        }
             break;
         default:
             exit(-1);

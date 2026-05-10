@@ -2,6 +2,8 @@
 #include "SsmsEventLoop.h"
 #include "SsmsTcpServer.h"
 #include "Base/SsmsLogStream.h"
+#include "SsmsUdpServer.h"
+#include "Media/SsmsWebrtcServer.h"
 
 using namespace ssms::nw;
 
@@ -21,7 +23,8 @@ SsmsEventLoopThread::SsmsEventLoopThread(int core_id)
 //线程, 导致线程无法退出
 SsmsEventLoopThread::~SsmsEventLoopThread()
 {
-    Run(nullptr, nullptr);
+    std::unordered_map<SsmsServerProtocol, SsmsNetAddressPtr> local_addr_map;
+    Run(local_addr_map, nullptr, nullptr, nullptr);
     if (loop_)
     {
         loop_->Stop();
@@ -44,9 +47,12 @@ SsmsEventLoop *SsmsEventLoopThread::Loop() const
 //Run运行完直接退出可能导致OnStart里的loop_ = &loop赋值
 //还没有完成, 导致其他线程获取到的SsmsEventLoop指针为空
 //因此, 这里使用promise_阻塞等待OnStart里调用set_value设置值
-void SsmsEventLoopThread::Run(const SsmsNetAddressPtr &local_addr, const SsmsLiveManagmentPtr &live_manage)
+void SsmsEventLoopThread::Run(const std::unordered_map<SsmsServerProtocol, SsmsNetAddressPtr> &local_addr_map,
+                                const SsmsNetAddressPtr &udp_addr,
+                                const SsmsLiveManagmentPtr &live_manage,
+                                const SsmsWebrtcServerPtr &rtc_server)
 {
-    std::call_once(once_, [this, local_addr, live_manage] () {
+    std::call_once(once_, [this, local_addr_map, udp_addr, live_manage, rtc_server] () {
         {
             std::lock_guard<std::mutex> lk(lock_);
             is_looping_ = true;
@@ -55,8 +61,16 @@ void SsmsEventLoopThread::Run(const SsmsNetAddressPtr &local_addr, const SsmsLiv
         auto f = promise_.get_future();
         f.get();
 
-        tcp_server_ = std::make_shared<SsmsTcpServer>(loop_, local_addr, live_manage);
-        tcp_server_->Start();
+        tcp_server_ = std::make_shared<SsmsTcpServer>(loop_, local_addr_map, live_manage);
+        tcp_server_->Start(rtc_server);
+        udp_server_ = std::make_shared<SsmsUdpServer>(loop_,
+                                                    live_manage,
+                                                    udp_addr,
+                                                    rtc_server);
+        udp_server_->SetMessageCallback([this, rtc_server] (const SsmsUdpSocketPtr &udp_socket, const SsmsNetAddressPtr &client_addr, const SsmsUdpPktPtr &in_pkt) {
+            return rtc_server->OnMessage(udp_socket, client_addr, in_pkt);
+        });
+        udp_server_->Start();
     });
 }
 

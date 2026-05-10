@@ -20,7 +20,7 @@ SsmsPublishClient::SsmsPublishClient(const std::string &app,
                 SsmsEventLoop *loop)
 : SsmsClient(app, stream, live_manage, conn, context, loop)
 {
-
+    decoder_.Init(44100, 1024, 2);
 }
 
 int SsmsPublishClient::Process(const SsmsPacketPtr &data, const std::string &command, double trans_id)
@@ -243,6 +243,9 @@ int SsmsPublishClient::ProcessAudioVideo(const SsmsPacketPtr &data)
     {
         data->SetTimestamp(next_audio_timestamp);
         next_audio_timestamp += a_frame_interval;
+        SsmsUdpPktPtr temp;
+        // decoder_.Decode((uint8_t *)data->data + 2, data->payload_size_ - 2, temp);
+        decoder_.Decode((uint8_t *)data->data, data->payload_size_, temp);
     }
     else if (data->IsVideo() && !data->IsVideoSequenceHeader())
     {
@@ -338,7 +341,7 @@ int SsmsPublishClient::ParseDataMessage(const SsmsPacketPtr &data, uint32_t offs
 void SsmsPublishClient::PostMessage(const SsmsPacketPtr &pkt, bool fmt0)
 {
     loop_->AddTask([this, pkt] () {
-        context_->BuildChunk(pkt, pkt->Timestamp(), true);
-        context_->SendNodes();
+        context_->GetContext<SsmsRtmpMessageContext>()->BuildChunk(pkt, pkt->Timestamp(), true);
+        context_->GetContext<SsmsRtmpMessageContext>()->SendNodes();
     });
 }

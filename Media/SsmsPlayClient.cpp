@@ -83,24 +83,24 @@ void SsmsPlayClient::Play()
     }
     if (meta_)
     {
-        context_->BuildChunk(meta_, 0, true);
+        context_->GetContext<SsmsRtmpMessageContext>()->BuildChunk(meta_, 0, true);
         meta_.reset();
     }
     if (aac_sequence_header_)
     {
-        context_->BuildChunk(aac_sequence_header_, 0, true);
+        context_->GetContext<SsmsRtmpMessageContext>()->BuildChunk(aac_sequence_header_, 0, true);
         aac_sequence_header_.reset();
     }
     if (avc_sequence_header_)
     {
-        context_->BuildChunk(avc_sequence_header_, 0, true);
+        context_->GetContext<SsmsRtmpMessageContext>()->BuildChunk(avc_sequence_header_, 0, true);
         avc_sequence_header_.reset();
     }
 
     for (auto it = out_packet_.begin(); it != out_packet_.end();)
     {
         uint32_t corrected_timestamp = corrector_->CorrectTimestamp(*it);
-        if (context_->BuildChunk(*it, corrected_timestamp, true))
+        if (context_->GetContext<SsmsRtmpMessageContext>()->BuildChunk(*it, corrected_timestamp, true))
         {
             //out_packet_里不会有头部, 这里就不加头部的判断了
             if ((*it)->IsVideo())
@@ -114,7 +114,7 @@ void SsmsPlayClient::Play()
             break;
         }
     }
-    context_->SendNodes();
+    context_->GetContext<SsmsRtmpMessageContext>()->SendNodes();
 }
 
 void SsmsPlayClient::Active()
@@ -302,7 +302,7 @@ int SsmsPlayClient::PlayResponse(double trans_id)
 void SsmsPlayClient::PostMessage(const SsmsPacketPtr &pkt, bool fmt0)
 {
     loop_->AddTask([this, pkt] () {
-        context_->BuildChunk(pkt, pkt->Timestamp(), true);
-        context_->SendNodes();
+        context_->GetContext<SsmsRtmpMessageContext>()->BuildChunk(pkt, pkt->Timestamp(), true);
+        context_->GetContext<SsmsRtmpMessageContext>()->SendNodes();
     });
 }

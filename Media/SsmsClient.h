@@ -20,18 +20,20 @@ namespace ssms
                             const std::string &stream,
                             const SsmsLiveManagmentPtr &live_manage,
                             const TcpConnectionPtr &conn,
-                            SsmsRtmpMessageContextPtr context,
+                            SsmsContextPtr context,
                             SsmsEventLoop *loop);
             virtual ~SsmsClient() = default;
             
-            virtual int Process(const SsmsPacketPtr &data, const std::string &command, double trans_id = 999999.999999) = 0;
+            virtual int Process(const SsmsPacketPtr &data, const std::string &command, double trans_id = 999999.999999);
+            virtual int Process(const std::string &method, const std::string &url, const char *out_payload, int out_payload_len, SsmsPacketPtr &pkt);
+            virtual int Init();
         protected:
             std::string app_name_;
             std::string stream_name_;
             SsmsSessionPtr sess_;
             SsmsLiveManagmentPtr live_manage_;
             TcpConnectionPtr conn_;
-            SsmsRtmpMessageContextPtr context_;
+            SsmsContextPtr context_;
             SsmsEventLoop *loop_{nullptr};
         };
     }

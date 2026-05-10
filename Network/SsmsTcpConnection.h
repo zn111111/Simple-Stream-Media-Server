@@ -58,7 +58,8 @@ namespace ssms
             void SendPkt(char *data, uint32_t len);
             //发送单个数据包, 事件循环内调用
             void SendPktInLoop(char *data, uint32_t len);
-            void SendNodes(const std::list<BufferNodePtr> &iovecs);
+            void SendNode(const struct iovec &iovec);
+            void SendNodes(const std::list<struct iovec> &iovecs);
         private:
             //发送单个数据包, 可能会被其他线程调用, 不监听，先尝试发送, 发送失败或没发完就入队
             void OnSendPkt(char *data, uint32_t len);
